@@ -6,12 +6,15 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.image.BufferedImage;
 import java.util.ArrayList;
-import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import javax.swing.Timer;
 import javax.swing.ImageIcon;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.util.Scanner;
 
 public class Window extends JPanel implements ActionListener {
   private final int WIDTH = 256;
@@ -20,80 +23,14 @@ public class Window extends JPanel implements ActionListener {
   private final JLabel J_LABEL = new JLabel();
   private final Timer TIMER = new Timer(10, this);
 
-  private static Mesh meshCube = new Mesh(Arrays.asList(
-    // South
-    new Triangle(
-      0, 0, 0,
-      0, 1, 0,
-      1, 1, 0
-    ),
-    new Triangle(
-      0, 0, 0,
-      1, 1, 0,
-      1, 0, 0
-    ),
-    // East
-    new Triangle(
-      1, 0, 0,
-      1, 1, 0,
-      1, 1, 1
-    ),
-    new Triangle(
-      1, 0, 0,
-      1, 1, 1,
-      1, 0, 1
-    ),
-    // North
-    new Triangle(
-      1, 0, 1,
-      1, 1, 1,
-      0, 1, 1
-    ),
-    new Triangle(
-      1, 0, 1,
-      0, 1, 1,
-      0, 0, 1
-    ),
-    // West
-    new Triangle(
-      0, 0, 1,
-      0, 1, 1,
-      0, 1, 0
-    ),
-    new Triangle(
-      0, 0, 1,
-      0, 1, 0,
-      0, 0, 0
-    ),
-    // Top
-    new Triangle(
-      0, 1, 0,
-      0, 1, 1,
-      1, 1, 1
-    ),
-    new Triangle(
-      0, 1, 0,
-      1, 1, 1,
-      1, 1, 0
-    ),
-    // Bottom
-    new Triangle(
-      1, 0, 1,
-      0, 0, 1,
-      0, 0, 0
-    ),
-    new Triangle(
-      1, 0, 1,
-      0, 0, 0,
-      1, 0, 0
-    )
-  ));
+  private static Mesh meshCube = new Mesh();
+
 
   private double near = 0.1;
   private double far = 1000;
   private double fov = 90;
   private double aspectRatio = (double)HEIGHT / WIDTH;
-  private double fovRadians = 1 / Math.tan(fov * 0.5 / 180 * Math.PI);
+  private double fovRadians = 1 / Math.tan(Math.toRadians(fov * 0.5));
   private Matrix4x4 projectionMatrix = new Matrix4x4(new double[][] {
     {aspectRatio * fovRadians, 0, 0, 0},
     {0, fovRadians, 0, 0},
@@ -112,6 +49,8 @@ public class Window extends JPanel implements ActionListener {
     J_LABEL.setIcon(new ImageIcon(BUFFERED_IMAGE));
     this.add(J_LABEL);
     TIMER.start();
+
+    meshCube.loadFromObjectFile("VideoShip.obj");
   }
 
   @Override
@@ -139,7 +78,8 @@ public class Window extends JPanel implements ActionListener {
     rotationMatrixX.matrix[2][2] = Math.cos(theta * 0.5);
     rotationMatrixX.matrix[3][3] = 1;
 
-    graphics.setColor(Color.WHITE);
+    ArrayList<Triangle> trianglesToRaster = new ArrayList<Triangle>();
+
     for (int i = 0; i < meshCube.triangles.size(); i++) {
       Triangle projectedTriangle = new Triangle();
       Triangle translatedTriangle = new Triangle();
@@ -155,9 +95,9 @@ public class Window extends JPanel implements ActionListener {
       zXRotatedTriangle.point[2] = multiplyMatrixVector(zRotatedTriangle.point[2], rotationMatrixX);
       
       translatedTriangle = zXRotatedTriangle.clone();
-      translatedTriangle.point[0].z = zXRotatedTriangle.point[0].z + 3;
-      translatedTriangle.point[1].z = zXRotatedTriangle.point[1].z + 3;
-      translatedTriangle.point[2].z = zXRotatedTriangle.point[2].z + 3;
+      translatedTriangle.point[0].z = zXRotatedTriangle.point[0].z + 8;
+      translatedTriangle.point[1].z = zXRotatedTriangle.point[1].z + 8;
+      translatedTriangle.point[2].z = zXRotatedTriangle.point[2].z + 8;
 
       Vec3d normal = new Vec3d();
       Vec3d line1 = new Vec3d();
@@ -175,17 +115,28 @@ public class Window extends JPanel implements ActionListener {
       normal.y = line1.z * line2.x - line1.x * line2.z;
       normal.z = line1.x * line2.y - line1.y * line2.x;
 
-      double l = Math.sqrt(normal.x * normal.x + normal.y * normal.y + normal.z * normal.z);
-      normal.x /= l;
-      normal.y /= l;
-      normal.z /= l;
+      double normalLength = Math.sqrt(normal.x * normal.x + normal.y * normal.y + normal.z * normal.z);
+      normal.x /= normalLength;
+      normal.y /= normalLength;
+      normal.z /= normalLength;
 
       if (normal.x * (translatedTriangle.point[0].x - camera.x) +
           normal.y * (translatedTriangle.point[0].y - camera.y) +
           normal.z * (translatedTriangle.point[0].z - camera.z) < 0) {
+
+        Vec3d lightDirection = new Vec3d(0, 0, -1);
+        double lightDirectionLength = Math.sqrt(lightDirection.x * lightDirection.x + lightDirection.y * lightDirection.y + lightDirection.z * lightDirection.z);
+        lightDirection.x /= lightDirectionLength;
+        lightDirection.y /= lightDirectionLength;
+        lightDirection.z /= lightDirectionLength;
+
+        double dotProduct = normal.x * lightDirection.x + normal.y * lightDirection.y + normal.z * lightDirection.z;
+        translatedTriangle.color = (short)(dotProduct * 255);
+
         projectedTriangle.point[0] = multiplyMatrixVector(translatedTriangle.point[0], projectionMatrix);
         projectedTriangle.point[1] = multiplyMatrixVector(translatedTriangle.point[1], projectionMatrix);
         projectedTriangle.point[2] = multiplyMatrixVector(translatedTriangle.point[2], projectionMatrix);
+        projectedTriangle.color = translatedTriangle.color;
         
         projectedTriangle.point[0].x += 1;
         projectedTriangle.point[0].y += 1;
@@ -201,16 +152,40 @@ public class Window extends JPanel implements ActionListener {
         projectedTriangle.point[2].x *= 0.5 * (double)WIDTH;
         projectedTriangle.point[2].y *= 0.5 * (double)HEIGHT;
 
-        graphics.drawPolygon(new int[] {
-          (int)projectedTriangle.point[0].x,
-          (int)projectedTriangle.point[1].x,
-          (int)projectedTriangle.point[2].x
-        }, new int[] {
-          (int)projectedTriangle.point[0].y,
-          (int)projectedTriangle.point[1].y,
-          (int)projectedTriangle.point[2].y
-        }, 3);
+        trianglesToRaster.add(projectedTriangle);
       }
+    }
+
+    Collections.sort(trianglesToRaster, (t1, t2) -> {
+      double z1 = (t1.point[0].z + t1.point[1].z + t1.point[2].z) / 3;
+      double z2 = (t2.point[0].z + t2.point[1].z + t2.point[2].z) / 3;
+      if (z1 > z2) {
+        return 1;
+      }
+      return -1;
+    });
+
+    for (Triangle projectedTriangles : trianglesToRaster) {
+      graphics.setColor(new Color(Math.min(Math.max(projectedTriangles.color, 0), 255), Math.min(Math.max(projectedTriangles.color, 0), 255), Math.min(Math.max(projectedTriangles.color, 0), 255)));
+      graphics.fillPolygon(new int[] {
+        (int)projectedTriangles.point[0].x,
+        (int)projectedTriangles.point[1].x,
+        (int)projectedTriangles.point[2].x
+      }, new int[] {
+        (int)projectedTriangles.point[0].y,
+        (int)projectedTriangles.point[1].y,
+        (int)projectedTriangles.point[2].y
+      }, 3);
+      graphics.setColor(Color.BLACK);
+      // graphics.drawPolygon(new int[] {
+      //   (int)projectedTriangles.point[0].x,
+      //   (int)projectedTriangles.point[1].x,
+      //   (int)projectedTriangles.point[2].x
+      // }, new int[] {
+      //   (int)projectedTriangles.point[0].y,
+      //   (int)projectedTriangles.point[1].y,
+      //   (int)projectedTriangles.point[2].y
+      // }, 3);
     }
 
     graphics.dispose();
@@ -249,15 +224,26 @@ public class Window extends JPanel implements ActionListener {
       this.y = 0;
       this.z = 0;
     }
+
+    public Vec3d clone() {
+      return new Vec3d(x, y, z);
+    }
   }
 
   public static class Triangle {
     public Vec3d[] point = new Vec3d[3];
+    public short color = 0;
 
     public Triangle(double x1, double y1, double z1, double x2, double y2, double z2, double x3, double y3, double z3) {
       point[0] = new Vec3d(x1, y1, z1);
       point[1] = new Vec3d(x2, y2, z2);
       point[2] = new Vec3d(x3, y3, z3);
+    }
+
+    public Triangle(Vec3d point1, Vec3d point2, Vec3d point3) {
+      point[0] = point1.clone();
+      point[1] = point2.clone();
+      point[2] = point3.clone();
     }
 
     public Triangle() {
@@ -280,6 +266,38 @@ public class Window extends JPanel implements ActionListener {
 
     public Mesh(List<Triangle> triangles) {
       this.triangles.addAll(triangles);
+    }
+
+    public Mesh() {}
+
+    public boolean loadFromObjectFile(String fileName) {
+      try {
+        File file = new File(fileName);
+        Scanner reader = new Scanner(file);
+        ArrayList<Vec3d> vertices = new ArrayList<Vec3d>();
+        while (reader.hasNextLine()) {
+          String data = reader.nextLine();
+          String[] splitData = data.split(" ");
+
+          if (data.charAt(0) == 'v') {
+            Vec3d vector = new Vec3d(Double.parseDouble(splitData[1]), Double.parseDouble(splitData[2]), Double.parseDouble(splitData[3]));
+            vertices.add(vector);
+          }
+          else if (data.charAt(0) == 'f') {
+            int[] faces = new int[3];
+            faces[0] = Integer.parseInt(splitData[1]);
+            faces[1] = Integer.parseInt(splitData[2]);
+            faces[2] = Integer.parseInt(splitData[3]);
+            meshCube.triangles.add(new Triangle(vertices.get(faces[0] - 1), vertices.get(faces[1] - 1), vertices.get(faces[2] - 1)));
+          }
+        }
+        reader.close();
+      }
+      catch (FileNotFoundException exception) {
+        exception.printStackTrace();
+        return false;
+      }
+      return true;
     }
   }
 
