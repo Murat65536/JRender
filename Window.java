@@ -58,7 +58,7 @@ public class Window extends JPanel implements ActionListener {
     new Triangle(
       0, 0, 1,
       0, 1, 1,
-      1, 1, 1
+      0, 1, 0
     ),
     new Triangle(
       0, 0, 1,
@@ -84,7 +84,7 @@ public class Window extends JPanel implements ActionListener {
     ),
     new Triangle(
       1, 0, 1,
-      0, 0, 1,
+      0, 0, 0,
       1, 0, 0
     )
   ));
@@ -102,6 +102,7 @@ public class Window extends JPanel implements ActionListener {
   });
 
   private double theta = 0;
+  private Vec3d camera = new Vec3d();
 
   public Window() {
     super(true);
@@ -158,33 +159,58 @@ public class Window extends JPanel implements ActionListener {
       translatedTriangle.point[1].z = zXRotatedTriangle.point[1].z + 3;
       translatedTriangle.point[2].z = zXRotatedTriangle.point[2].z + 3;
 
-      projectedTriangle.point[0] = multiplyMatrixVector(translatedTriangle.point[0], projectionMatrix);
-      projectedTriangle.point[1] = multiplyMatrixVector(translatedTriangle.point[1], projectionMatrix);
-      projectedTriangle.point[2] = multiplyMatrixVector(translatedTriangle.point[2], projectionMatrix);
+      Vec3d normal = new Vec3d();
+      Vec3d line1 = new Vec3d();
+      Vec3d line2 = new Vec3d();
 
-      projectedTriangle.point[0].x += 1;
-      projectedTriangle.point[0].y += 1;
-      projectedTriangle.point[1].x += 1;
-      projectedTriangle.point[1].y += 1;
-      projectedTriangle.point[2].x += 1;
-      projectedTriangle.point[2].y += 1;
+      line1.x = translatedTriangle.point[1].x - translatedTriangle.point[0].x;
+      line1.y = translatedTriangle.point[1].y - translatedTriangle.point[0].y;
+      line1.z = translatedTriangle.point[1].z - translatedTriangle.point[0].z;
 
-      projectedTriangle.point[0].x *= 0.5 * (double)WIDTH;
-      projectedTriangle.point[0].y *= 0.5 * (double)HEIGHT;
-      projectedTriangle.point[1].x *= 0.5 * (double)WIDTH;
-      projectedTriangle.point[1].y *= 0.5 * (double)HEIGHT;
-      projectedTriangle.point[2].x *= 0.5 * (double)WIDTH;
-      projectedTriangle.point[2].y *= 0.5 * (double)HEIGHT;
+      line2.x = translatedTriangle.point[2].x - translatedTriangle.point[0].x;
+      line2.y = translatedTriangle.point[2].y - translatedTriangle.point[0].y;
+      line2.z = translatedTriangle.point[2].z - translatedTriangle.point[0].z;
 
-      graphics.drawPolygon(new int[] {
-        (int)projectedTriangle.point[0].x,
-        (int)projectedTriangle.point[1].x,
-        (int)projectedTriangle.point[2].x
-      }, new int[] {
-        (int)projectedTriangle.point[0].y,
-        (int)projectedTriangle.point[1].y,
-        (int)projectedTriangle.point[2].y
-      }, 3);
+      normal.x = line1.y * line2.z - line1.z * line2.y;
+      normal.y = line1.z * line2.x - line1.x * line2.z;
+      normal.z = line1.x * line2.y - line1.y * line2.x;
+
+      double l = Math.sqrt(normal.x * normal.x + normal.y * normal.y + normal.z * normal.z);
+      normal.x /= l;
+      normal.y /= l;
+      normal.z /= l;
+
+      if (normal.x * (translatedTriangle.point[0].x - camera.x) +
+          normal.y * (translatedTriangle.point[0].y - camera.y) +
+          normal.z * (translatedTriangle.point[0].z - camera.z) < 0) {
+        projectedTriangle.point[0] = multiplyMatrixVector(translatedTriangle.point[0], projectionMatrix);
+        projectedTriangle.point[1] = multiplyMatrixVector(translatedTriangle.point[1], projectionMatrix);
+        projectedTriangle.point[2] = multiplyMatrixVector(translatedTriangle.point[2], projectionMatrix);
+        
+        projectedTriangle.point[0].x += 1;
+        projectedTriangle.point[0].y += 1;
+        projectedTriangle.point[1].x += 1;
+        projectedTriangle.point[1].y += 1;
+        projectedTriangle.point[2].x += 1;
+        projectedTriangle.point[2].y += 1;
+
+        projectedTriangle.point[0].x *= 0.5 * (double)WIDTH;
+        projectedTriangle.point[0].y *= 0.5 * (double)HEIGHT;
+        projectedTriangle.point[1].x *= 0.5 * (double)WIDTH;
+        projectedTriangle.point[1].y *= 0.5 * (double)HEIGHT;
+        projectedTriangle.point[2].x *= 0.5 * (double)WIDTH;
+        projectedTriangle.point[2].y *= 0.5 * (double)HEIGHT;
+
+        graphics.drawPolygon(new int[] {
+          (int)projectedTriangle.point[0].x,
+          (int)projectedTriangle.point[1].x,
+          (int)projectedTriangle.point[2].x
+        }, new int[] {
+          (int)projectedTriangle.point[0].y,
+          (int)projectedTriangle.point[1].y,
+          (int)projectedTriangle.point[2].y
+        }, 3);
+      }
     }
 
     graphics.dispose();
