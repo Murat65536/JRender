@@ -153,7 +153,7 @@ public class Window extends JPanel implements ActionListener {
       zXRotatedTriangle.point[1] = multiplyMatrixVector(zRotatedTriangle.point[1], rotationMatrixX);
       zXRotatedTriangle.point[2] = multiplyMatrixVector(zRotatedTriangle.point[2], rotationMatrixX);
       
-      translatedTriangle = zXRotatedTriangle;
+      translatedTriangle = zXRotatedTriangle.clone();
       translatedTriangle.point[0].z = zXRotatedTriangle.point[0].z + 3;
       translatedTriangle.point[1].z = zXRotatedTriangle.point[1].z + 3;
       translatedTriangle.point[2].z = zXRotatedTriangle.point[2].z + 3;
@@ -216,6 +216,12 @@ public class Window extends JPanel implements ActionListener {
       this.x = x;
       this.y = y;
       this.z = z;
+    }
+
+    public Vec3d() {
+      this.x = 0;
+      this.y = 0;
+      this.z = 0;
     }
   }
 
