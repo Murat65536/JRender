@@ -176,7 +176,7 @@ public class Window extends JPanel implements ActionListener {
         (int)projectedTriangles.point[1].y,
         (int)projectedTriangles.point[2].y
       }, 3);
-      graphics.setColor(Color.BLACK);
+      // graphics.setColor(Color.BLACK);
       // graphics.drawPolygon(new int[] {
       //   (int)projectedTriangles.point[0].x,
       //   (int)projectedTriangles.point[1].x,
@@ -208,10 +208,141 @@ public class Window extends JPanel implements ActionListener {
     return output;
   }
 
+  public Vec3d matrixMultiplyVector(Matrix4x4 m, Vec3d i) {
+    Vec3d v = new Vec3d();
+    v.x = i.x * m.matrix[0][0] + i.y * m.matrix[1][0] + i.z * m.matrix[2][0] + i.w * m.matrix[3][0];
+    v.y = i.x * m.matrix[0][1] + i.y * m.matrix[1][1] + i.z * m.matrix[2][1] + i.w * m.matrix[3][1];
+    v.z = i.x * m.matrix[0][2] + i.y * m.matrix[1][2] + i.z * m.matrix[2][2] + i.w * m.matrix[3][2];
+    v.w = i.x * m.matrix[0][3] + i.y * m.matrix[1][3] + i.z * m.matrix[2][3] + i.w * m.matrix[3][3];
+
+    return v;
+  }
+
+  public Vec3d vectorAdd(Vec3d v1, Vec3d v2) {
+    return new Vec3d(v1.x + v2.x, v1.y + v2.y, v1.z + v2.z);
+  }
+
+  public Vec3d vectorSubtract(Vec3d v1, Vec3d v2) {
+    return new Vec3d(v1.x - v2.x, v1.y - v2.y, v1.z - v2.z);
+  }
+
+  public Vec3d vectorMultiply(Vec3d v1, double k) {
+    return new Vec3d(v1.x * k, v1.y * k, v1.z * k);
+  }
+
+  public Vec3d vectorDivide(Vec3d v1, double k) {
+    return new Vec3d(v1.x / k, v1.y / k, v1.z / k);
+  }
+
+  public double vectorDotProduct(Vec3d v1, Vec3d v2) {
+    return v1.x * v2.x + v1.y * v2.y + v1.z * v2.z;
+  }
+
+  public double vectorLength(Vec3d v) {
+    return Math.sqrt(vectorDotProduct(v, v));
+  }
+
+  public Vec3d vectorNormalize(Vec3d v) {
+    double l = vectorLength(v);
+    return new Vec3d(v.x / l, v.y / l, v.z / l);
+  }
+
+  public Vec3d vectorCrossProduct(Vec3d v1, Vec3d v2) {
+    Vec3d v = new Vec3d();
+    v.x = v1.y * v2.z - v1.z * v2.y;
+    v.y = v1.z * v2.x - v1.x * v2.z;
+    v.z = v1.x * v2.y - v1.y * v2.x;
+
+    return v;
+  }
+
+  public Matrix4x4 matrixMakeIdentity() {
+    Matrix4x4 matrix = new Matrix4x4();
+    matrix.matrix[0][0] = 1;
+    matrix.matrix[1][1] = 1;
+    matrix.matrix[2][2] = 1;
+    matrix.matrix[3][3] = 1;
+
+    return matrix;
+  }
+
+  public Matrix4x4 matrixRotationX(double angle) {
+    Matrix4x4 matrix = new Matrix4x4();
+    matrix.matrix[0][0] = 1;
+    matrix.matrix[1][1] = Math.cos(angle);
+    matrix.matrix[1][2] = Math.sin(angle);
+    matrix.matrix[2][1] = -Math.sin(angle);
+    matrix.matrix[2][2] = Math.cos(angle);
+    matrix.matrix[3][3] = 1;
+
+    return matrix;
+  }
+
+  public Matrix4x4 matrixRotationY(double angle) {
+    Matrix4x4 matrix = new Matrix4x4();
+    matrix.matrix[0][0] = Math.cos(angle);
+    matrix.matrix[0][2] = Math.sin(angle);
+    matrix.matrix[2][0] = -Math.sin(angle);
+    matrix.matrix[1][1] = 1;
+    matrix.matrix[2][2] = Math.cos(angle);
+    matrix.matrix[3][3] = 1;
+
+    return matrix;
+  }
+
+  public Matrix4x4 matrixRotationZ(double angle) {
+    Matrix4x4 matrix = new Matrix4x4();
+    matrix.matrix[0][0] = Math.cos(angle);
+    matrix.matrix[0][1] = Math.sin(angle);
+    matrix.matrix[1][0] = -Math.sin(angle);
+    matrix.matrix[1][1] = Math.cos(angle);
+    matrix.matrix[2][2] = 1;
+    matrix.matrix[3][3] = 1;
+
+    return matrix;
+  }
+
+  public Matrix4x4 matrixMakeTranslation(double x, double y, double z) {
+    Matrix4x4 matrix = new Matrix4x4();
+    matrix.matrix[0][0] = 1;
+    matrix.matrix[1][1] = 1;
+    matrix.matrix[2][2] = 1;
+    matrix.matrix[3][3] = 1;
+    matrix.matrix[3][0] = x;
+    matrix.matrix[3][1] = y;
+    matrix.matrix[3][2] = z;
+
+    return matrix;
+  }
+
+  public Matrix4x4 matrixMakeProjection(double fov, double aspectRatio, double near, double far) {
+    double fovRadians = 1 / Math.tan(Math.toRadians(fov * 0.5));
+    Matrix4x4 matrix = new Matrix4x4();
+    matrix.matrix[0][0] = aspectRatio * fovRadians;
+    matrix.matrix[1][1] = fovRadians;
+    matrix.matrix[2][2] = far / (far - near);
+    matrix.matrix[3][2] = (-far * near) / (far - near);
+    matrix.matrix[2][3] = 1;
+    matrix.matrix[3][3] = 0;
+
+    return matrix;
+  }
+
+  public Matrix4x4 matrixMultiplyMatrix(Matrix4x4 m1, Matrix4x4 m2) {
+    Matrix4x4 matrix = new Matrix4x4();
+    for (int c = 0; c < 4; c++) {
+      for (int r = 0; r < 4; r++) {
+        matrix.matrix[r][c] = m1.matrix[r][0] * m2.matrix[0][c] + m1.matrix[r][1] * m2.matrix[1][c] + m1.matrix[r][2] * m2.matrix[2][c] + m1.matrix[r][3] * m2.matrix[3][c];
+      }
+    }
+    return matrix;
+  }
+
   public static class Vec3d {
     public double x = 0;
     public double y = 0;
     public double z = 0;
+    public double w = 1;
 
     public Vec3d(double x, double y, double z) {
       this.x = x;
