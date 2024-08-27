@@ -4,6 +4,8 @@ import java.awt.Graphics2D;
 import java.awt.GridLayout;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.event.KeyEvent;
+import java.awt.event.KeyListener;
 import java.awt.image.BufferedImage;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -16,7 +18,7 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.util.Scanner;
 
-public class Window extends JPanel implements ActionListener {
+public class Window extends JPanel implements ActionListener, KeyListener {
   private final int WIDTH = 1024;
   private final int HEIGHT = 960;
   private final BufferedImage BUFFERED_IMAGE;
@@ -29,6 +31,9 @@ public class Window extends JPanel implements ActionListener {
 
   private double theta = 0;
   private Vec3d camera = new Vec3d();
+  private Vec3d lookDirection = new Vec3d();
+
+  private static ArrayList<Integer> pressedKeys = new ArrayList<Integer>();
 
   public Window() {
     super(true);
@@ -39,16 +44,17 @@ public class Window extends JPanel implements ActionListener {
     this.add(J_LABEL);
     TIMER.start();
 
-    meshCube.loadFromObjectFile("Teapot.obj");
+    meshCube.loadFromObjectFile("axis.obj");
   }
 
   @Override
   public void actionPerformed(ActionEvent event) {
+    getKeys();
     Graphics2D graphics = BUFFERED_IMAGE.createGraphics();
     graphics.setColor(Color.BLACK);
     graphics.fillRect(0, 0, WIDTH, HEIGHT);
 
-    theta += 0.00000000000001 * System.currentTimeMillis();
+    // theta += 0.00000000000001 * System.currentTimeMillis();
 
     Matrix4x4 rotationMatrixZ = matrixRotationZ(theta * 0.5);
     Matrix4x4 rotationMatrixX = matrixRotationX(theta);
@@ -56,11 +62,19 @@ public class Window extends JPanel implements ActionListener {
     Matrix4x4 translationMatrix = matrixMakeTranslation(0, 0, 16);
     Matrix4x4 worldMatrix = matrixMultiplyMatrix(matrixMultiplyMatrix(rotationMatrixZ, rotationMatrixX), translationMatrix);
 
+    lookDirection = new Vec3d(0, 0, 1);
+    Vec3d up = new Vec3d(0, 1, 0);
+    Vec3d target = vectorAdd(camera, lookDirection);
+
+    Matrix4x4 cameraMatrix = matrixPointAt(camera, target, up);
+    Matrix4x4 viewMatrix = matrixQuickInverse(cameraMatrix);
+
     ArrayList<Triangle> trianglesToRaster = new ArrayList<Triangle>();
 
-    for (int i = 0; i < meshCube.triangles.size(); i++) { // Make this a for each loop.
+    for (int i = 0; i < meshCube.triangles.size(); i++) {
       Triangle projectedTriangle = new Triangle();
       Triangle transformedTriangle = new Triangle();
+      Triangle triangleViewed = new Triangle();
       
       transformedTriangle.point[0] = matrixMultiplyVector(worldMatrix, meshCube.triangles.get(i).point[0]);
       transformedTriangle.point[1] = matrixMultiplyVector(worldMatrix, meshCube.triangles.get(i).point[1]);
@@ -90,9 +104,13 @@ public class Window extends JPanel implements ActionListener {
         double dotProduct = Math.max(0.1, vectorDotProduct(lightDirection, normal));
         transformedTriangle.color = (short)(dotProduct * 255);
 
-        projectedTriangle.point[0] = multiplyMatrixVector(transformedTriangle.point[0], projectionMatrix);
-        projectedTriangle.point[1] = multiplyMatrixVector(transformedTriangle.point[1], projectionMatrix);
-        projectedTriangle.point[2] = multiplyMatrixVector(transformedTriangle.point[2], projectionMatrix);
+        triangleViewed.point[0] = matrixMultiplyVector(viewMatrix, transformedTriangle.point[0]);
+        triangleViewed.point[1] = matrixMultiplyVector(viewMatrix, transformedTriangle.point[1]);
+        triangleViewed.point[2] = matrixMultiplyVector(viewMatrix, transformedTriangle.point[2]);
+
+        projectedTriangle.point[0] = multiplyMatrixVector(triangleViewed.point[0], projectionMatrix);
+        projectedTriangle.point[1] = multiplyMatrixVector(triangleViewed.point[1], projectionMatrix);
+        projectedTriangle.point[2] = multiplyMatrixVector(triangleViewed.point[2], projectionMatrix);
         projectedTriangle.color = transformedTriangle.color;
 
         projectedTriangle.point[0] = vectorDivide(projectedTriangle.point[0], projectedTriangle.point[0].w);
@@ -295,6 +313,78 @@ public class Window extends JPanel implements ActionListener {
     }
     return matrix;
   }
+
+  public Matrix4x4 matrixPointAt(Vec3d pos, Vec3d target, Vec3d up) {
+    Vec3d newForward = vectorSubtract(target, pos);
+    newForward = vectorNormalize(newForward);
+
+    Vec3d a = vectorMultiply(newForward, vectorDotProduct(up, newForward));
+    Vec3d newUp = vectorSubtract(up, a);
+    newUp = vectorNormalize(newUp);
+
+    Vec3d newRight = vectorCrossProduct(newUp, newForward);
+
+    Matrix4x4 matrix = new Matrix4x4(new double[][] {
+      {newRight.x, newRight.y, newRight.z, 0},
+      {newUp.x, newUp.y, newUp.z, 0},
+      {newForward.x, newForward.y, newForward.z, 0},
+      {pos.x, pos.y, pos.z, 1}
+    });
+
+    return matrix;
+  }
+
+  public Matrix4x4 matrixQuickInverse(Matrix4x4 m) {
+    Matrix4x4 matrix = new Matrix4x4();
+    matrix.matrix[0][0] = m.matrix[0][0];
+    matrix.matrix[0][1] = m.matrix[1][0];
+    matrix.matrix[0][2] = m.matrix[2][0];
+    matrix.matrix[0][3] = 0;
+    matrix.matrix[1][0] = m.matrix[0][1];
+    matrix.matrix[1][1] = m.matrix[1][1];
+    matrix.matrix[1][2] = m.matrix[2][1];
+    matrix.matrix[1][3] = 0;
+    matrix.matrix[2][0] = m.matrix[0][2];
+    matrix.matrix[2][1] = m.matrix[1][2];
+    matrix.matrix[2][2] = m.matrix[2][2];
+    matrix.matrix[2][3] = 0;
+    matrix.matrix[3][0] = -(m.matrix[3][0] * matrix.matrix[0][0] + m.matrix[3][1] * matrix.matrix[1][0] + m.matrix[3][2] * matrix.matrix[2][0]);
+    matrix.matrix[3][1] = -(m.matrix[3][0] * matrix.matrix[0][1] + m.matrix[3][1] * matrix.matrix[1][1] + m.matrix[3][2] * matrix.matrix[2][1]);
+    matrix.matrix[3][2] = -(m.matrix[3][0] * matrix.matrix[0][2] + m.matrix[3][1] * matrix.matrix[1][2] + m.matrix[3][2] * matrix.matrix[2][2]);
+    matrix.matrix[3][3] = 1;
+
+    return matrix;
+  }
+
+  public void getKeys() {
+    if (pressedKeys.contains(KeyEvent.VK_W)) {
+      camera.y += 0.5;
+    }
+
+    if (pressedKeys.contains(KeyEvent.VK_S)) {
+      camera.y -= 0.5;
+    }
+
+    if (pressedKeys.contains(KeyEvent.VK_A)) {
+      camera.x -= 0.5;
+    }
+
+    if (pressedKeys.contains(KeyEvent.VK_D)) {
+      camera.x += 0.5;
+    }
+  }
+
+  public void keyPressed(KeyEvent event) {
+    if (!pressedKeys.contains(event.getKeyCode())) {
+      pressedKeys.add(event.getKeyCode());
+    }
+  }
+  public void keyReleased(KeyEvent event) {
+    if (pressedKeys.contains(event.getKeyCode())) {
+      pressedKeys.remove(Integer.valueOf(event.getKeyCode()));
+    }
+  }
+  public void keyTyped(KeyEvent event) {}
 
   public static class Vec3d {
     public double x = 0;

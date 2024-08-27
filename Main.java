@@ -15,6 +15,7 @@ public class Main {
         frame.setResizable(false);
         frame.setFocusable(true);
         frame.requestFocusInWindow();
+        frame.addKeyListener(window);
         frame.setVisible(true);
       }
     });
