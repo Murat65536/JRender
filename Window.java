@@ -32,6 +32,7 @@ public class Window extends JPanel implements ActionListener, KeyListener {
   private double theta = 0;
   private Vec3d camera = new Vec3d();
   private Vec3d lookDirection = new Vec3d();
+  private double yaw = 0;
 
   private static ArrayList<Integer> pressedKeys = new ArrayList<Integer>();
 
@@ -62,9 +63,11 @@ public class Window extends JPanel implements ActionListener, KeyListener {
     Matrix4x4 translationMatrix = matrixMakeTranslation(0, 0, 16);
     Matrix4x4 worldMatrix = matrixMultiplyMatrix(matrixMultiplyMatrix(rotationMatrixZ, rotationMatrixX), translationMatrix);
 
-    lookDirection = new Vec3d(0, 0, 1);
     Vec3d up = new Vec3d(0, 1, 0);
-    Vec3d target = vectorAdd(camera, lookDirection);
+    Vec3d target = new Vec3d(0, 0, 1);
+    Matrix4x4 cameraRotateMatrix = matrixRotationY(yaw);
+    lookDirection = matrixMultiplyVector(cameraRotateMatrix, target);
+    target = vectorAdd(camera, lookDirection);
 
     Matrix4x4 cameraMatrix = matrixPointAt(camera, target, up);
     Matrix4x4 viewMatrix = matrixQuickInverse(cameraMatrix);
@@ -356,21 +359,119 @@ public class Window extends JPanel implements ActionListener, KeyListener {
     return matrix;
   }
 
+  public Vec3d vectorIntersectPlane(Vec3d planeP, Vec3d planeN, Vec3d lineStart, Vec3d lineEnd) {
+    planeN = vectorNormalize(planeN);
+    double planeD = -vectorDotProduct(planeN, planeP);
+    double ad = vectorDotProduct(lineStart, planeN);
+    double bd = vectorDotProduct(lineEnd, lineEnd);
+    double t = (-planeD - ad) / (bd - ad);
+    Vec3d lineStartToEnd = vectorSubtract(lineEnd, lineStart);
+    Vec3d lineToIntersect = vectorMultiply(lineStartToEnd, t);
+
+    return vectorAdd(lineStart, lineToIntersect);
+  }
+
+  public int triangleClipAgainstPlane(Vec3d planeP, Vec3d planeN, Triangle inTriangle, Triangle outTriangle1, Triangle outTriangle2) {
+    planeN = vectorNormalize(planeN);
+    Vec3d[] insidePoints = new Vec3d[3];
+    int insidePointCount = 0;
+    Vec3d[] outsidePoints = new Vec3d[3];
+    int outsidePointCount = 0;
+
+    double d0 = planeN.x * inTriangle.point[0].x + planeN.y * inTriangle.point[0].y + planeN.z * inTriangle.point[0].z - vectorDotProduct(planeN, planeP);
+    double d1 = planeN.x * inTriangle.point[1].x + planeN.y * inTriangle.point[1].y + planeN.z * inTriangle.point[0].z - vectorDotProduct(planeN, planeP);
+    double d2 = planeN.x * inTriangle.point[2].x + planeN.y * inTriangle.point[2].y + planeN.z * inTriangle.point[0].z - vectorDotProduct(planeN, planeP);
+
+    if (d0 >= 0) {
+      insidePoints[insidePointCount++] = inTriangle.point[0];
+    }
+    else {
+      outsidePoints[outsidePointCount++] = inTriangle.point[0];
+    }
+    if (d1 >= 0) {
+      insidePoints[insidePointCount++] = inTriangle.point[1];
+    }
+    else {
+      outsidePoints[outsidePointCount++] = inTriangle.point[1];
+    }
+    if (d2 >= 0) {
+      insidePoints[insidePointCount++] = inTriangle.point[2];
+    }
+    else {
+      outsidePoints[outsidePointCount++] = inTriangle.point[2];
+    }
+
+    if (insidePointCount == 0) {
+      return 0;
+    }
+    if (insidePointCount == 3) {
+      outTriangle1 = inTriangle;
+
+      return 1;
+    }
+
+    if (insidePointCount == 1 && outsidePointCount == 2) {
+      outTriangle1.color = inTriangle.color;
+
+      outTriangle1.point[0] = insidePoints[0];
+      outTriangle1.point[1] = vectorIntersectPlane(planeP, planeN, insidePoints[0], outsidePoints[0]);
+      outTriangle1.point[2] = vectorIntersectPlane(planeP, planeN, insidePoints[0], outsidePoints[1]);
+
+      return 1;
+    }
+
+    if (insidePointCount == 2 && outsidePointCount == 1) {
+      outTriangle1.color = inTriangle.color;
+
+      outTriangle2.color = inTriangle.color;
+
+      outTriangle1.point[0] = insidePoints[0];
+      outTriangle1.point[1] = insidePoints[1];
+      outTriangle1.point[2] = vectorIntersectPlane(planeP, planeN, insidePoints[0], outsidePoints[0]);
+
+      outTriangle2.point[0] = insidePoints[1];
+      outTriangle2.point[1] = outTriangle1.point[2];
+      outTriangle2.point[2] = vectorIntersectPlane(planeP, planeN, insidePoints[1], outsidePoints[1]);
+
+      return 2;
+    }
+
+    return 0;
+  }
+
   public void getKeys() {
-    if (pressedKeys.contains(KeyEvent.VK_W)) {
+    if (pressedKeys.contains(KeyEvent.VK_UP)) {
       camera.y += 0.5;
     }
 
-    if (pressedKeys.contains(KeyEvent.VK_S)) {
+    if (pressedKeys.contains(KeyEvent.VK_DOWN)) {
       camera.y -= 0.5;
     }
 
-    if (pressedKeys.contains(KeyEvent.VK_A)) {
+    if (pressedKeys.contains(KeyEvent.VK_LEFT)) {
       camera.x -= 0.5;
     }
 
-    if (pressedKeys.contains(KeyEvent.VK_D)) {
+    if (pressedKeys.contains(KeyEvent.VK_RIGHT)) {
       camera.x += 0.5;
+    }
+
+    Vec3d forward = vectorMultiply(lookDirection, 0.5);
+
+    if (pressedKeys.contains(KeyEvent.VK_W)) {
+      camera = vectorAdd(camera, forward);
+    }
+
+    if (pressedKeys.contains(KeyEvent.VK_S)) {
+      camera = vectorSubtract(camera, forward);
+    }
+
+    if (pressedKeys.contains(KeyEvent.VK_A)) {
+      yaw -= 0.01;
+    }
+    
+    if (pressedKeys.contains(KeyEvent.VK_D)) {
+      yaw += 0.01;
     }
   }
 
