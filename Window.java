@@ -17,26 +17,15 @@ import java.io.FileNotFoundException;
 import java.util.Scanner;
 
 public class Window extends JPanel implements ActionListener {
-  private final int WIDTH = 256;
-  private final int HEIGHT = 240;
+  private final int WIDTH = 1024;
+  private final int HEIGHT = 960;
   private final BufferedImage BUFFERED_IMAGE;
   private final JLabel J_LABEL = new JLabel();
   private final Timer TIMER = new Timer(10, this);
 
   private static Mesh meshCube = new Mesh();
 
-
-  private double near = 0.1;
-  private double far = 1000;
-  private double fov = 90;
-  private double aspectRatio = (double)HEIGHT / WIDTH;
-  private double fovRadians = 1 / Math.tan(Math.toRadians(fov * 0.5));
-  private Matrix4x4 projectionMatrix = new Matrix4x4(new double[][] {
-    {aspectRatio * fovRadians, 0, 0, 0},
-    {0, fovRadians, 0, 0},
-    {0, 0, far / (far - near), 1},
-    {0, 0, (far * near) / (far - near), 0}
-  });
+  private Matrix4x4 projectionMatrix = matrixMakeProjection(90, (double)HEIGHT / WIDTH, 0.1, 1000);
 
   private double theta = 0;
   private Vec3d camera = new Vec3d();
@@ -50,7 +39,7 @@ public class Window extends JPanel implements ActionListener {
     this.add(J_LABEL);
     TIMER.start();
 
-    meshCube.loadFromObjectFile("teapot.obj");
+    meshCube.loadFromObjectFile("Teapot.obj");
   }
 
   @Override
@@ -59,91 +48,61 @@ public class Window extends JPanel implements ActionListener {
     graphics.setColor(Color.BLACK);
     graphics.fillRect(0, 0, WIDTH, HEIGHT);
 
-    Matrix4x4 rotationMatrixZ = new Matrix4x4();
-    Matrix4x4 rotationMatrixX = new Matrix4x4();
-
     theta += 0.00000000000001 * System.currentTimeMillis();
 
-    rotationMatrixZ.matrix[0][0] = Math.cos(theta);
-    rotationMatrixZ.matrix[0][1] = Math.sin(theta);
-    rotationMatrixZ.matrix[1][0] = -Math.sin(theta);
-    rotationMatrixZ.matrix[1][1] = Math.cos(theta);
-    rotationMatrixZ.matrix[2][2] = 1;
-    rotationMatrixZ.matrix[3][3] = 1;
+    Matrix4x4 rotationMatrixZ = matrixRotationZ(theta * 0.5);
+    Matrix4x4 rotationMatrixX = matrixRotationX(theta);
 
-    rotationMatrixX.matrix[0][0] = 1;
-    rotationMatrixX.matrix[1][1] = Math.cos(theta * 0.5);
-    rotationMatrixX.matrix[1][2] = Math.sin(theta * 0.5);
-    rotationMatrixX.matrix[2][1] = -Math.sin(theta * 0.5);
-    rotationMatrixX.matrix[2][2] = Math.cos(theta * 0.5);
-    rotationMatrixX.matrix[3][3] = 1;
+    Matrix4x4 translationMatrix = matrixMakeTranslation(0, 0, 16);
+    Matrix4x4 worldMatrix = matrixMultiplyMatrix(matrixMultiplyMatrix(rotationMatrixZ, rotationMatrixX), translationMatrix);
 
     ArrayList<Triangle> trianglesToRaster = new ArrayList<Triangle>();
 
-    for (int i = 0; i < meshCube.triangles.size(); i++) {
+    for (int i = 0; i < meshCube.triangles.size(); i++) { // Make this a for each loop.
       Triangle projectedTriangle = new Triangle();
-      Triangle translatedTriangle = new Triangle();
-      Triangle zRotatedTriangle = new Triangle();
-      Triangle zXRotatedTriangle = new Triangle();
-
-      zRotatedTriangle.point[0] = multiplyMatrixVector(meshCube.triangles.get(i).point[0], rotationMatrixZ);
-      zRotatedTriangle.point[1] = multiplyMatrixVector(meshCube.triangles.get(i).point[1], rotationMatrixZ);
-      zRotatedTriangle.point[2] = multiplyMatrixVector(meshCube.triangles.get(i).point[2], rotationMatrixZ);
-
-      zXRotatedTriangle.point[0] = multiplyMatrixVector(zRotatedTriangle.point[0], rotationMatrixX);
-      zXRotatedTriangle.point[1] = multiplyMatrixVector(zRotatedTriangle.point[1], rotationMatrixX);
-      zXRotatedTriangle.point[2] = multiplyMatrixVector(zRotatedTriangle.point[2], rotationMatrixX);
+      Triangle transformedTriangle = new Triangle();
       
-      translatedTriangle = zXRotatedTriangle.clone();
-      translatedTriangle.point[0].z = zXRotatedTriangle.point[0].z + 8;
-      translatedTriangle.point[1].z = zXRotatedTriangle.point[1].z + 8;
-      translatedTriangle.point[2].z = zXRotatedTriangle.point[2].z + 8;
+      transformedTriangle.point[0] = matrixMultiplyVector(worldMatrix, meshCube.triangles.get(i).point[0]);
+      transformedTriangle.point[1] = matrixMultiplyVector(worldMatrix, meshCube.triangles.get(i).point[1]);
+      transformedTriangle.point[2] = matrixMultiplyVector(worldMatrix, meshCube.triangles.get(i).point[2]);
 
       Vec3d normal = new Vec3d();
       Vec3d line1 = new Vec3d();
       Vec3d line2 = new Vec3d();
 
-      line1.x = translatedTriangle.point[1].x - translatedTriangle.point[0].x;
-      line1.y = translatedTriangle.point[1].y - translatedTriangle.point[0].y;
-      line1.z = translatedTriangle.point[1].z - translatedTriangle.point[0].z;
+      line1 = vectorSubtract(transformedTriangle.point[1], transformedTriangle.point[0]);
+      line2 = vectorSubtract(transformedTriangle.point[2], transformedTriangle.point[0]);
 
-      line2.x = translatedTriangle.point[2].x - translatedTriangle.point[0].x;
-      line2.y = translatedTriangle.point[2].y - translatedTriangle.point[0].y;
-      line2.z = translatedTriangle.point[2].z - translatedTriangle.point[0].z;
-
-      normal.x = line1.y * line2.z - line1.z * line2.y;
-      normal.y = line1.z * line2.x - line1.x * line2.z;
-      normal.z = line1.x * line2.y - line1.y * line2.x;
+      normal = vectorCrossProduct(line1, line2);
+      normal = vectorNormalize(normal);
 
       double normalLength = Math.sqrt(normal.x * normal.x + normal.y * normal.y + normal.z * normal.z);
       normal.x /= normalLength;
       normal.y /= normalLength;
       normal.z /= normalLength;
 
-      if (normal.x * (translatedTriangle.point[0].x - camera.x) +
-          normal.y * (translatedTriangle.point[0].y - camera.y) +
-          normal.z * (translatedTriangle.point[0].z - camera.z) < 0) {
+      Vec3d cameraRay = vectorSubtract(transformedTriangle.point[0], camera);
+
+      if (vectorDotProduct(normal, cameraRay) < 0) {
 
         Vec3d lightDirection = new Vec3d(0, 0, -1);
-        double lightDirectionLength = Math.sqrt(lightDirection.x * lightDirection.x + lightDirection.y * lightDirection.y + lightDirection.z * lightDirection.z);
-        lightDirection.x /= lightDirectionLength;
-        lightDirection.y /= lightDirectionLength;
-        lightDirection.z /= lightDirectionLength;
+        lightDirection = vectorNormalize(lightDirection);
+        double dotProduct = Math.max(0.1, vectorDotProduct(lightDirection, normal));
+        transformedTriangle.color = (short)(dotProduct * 255);
 
-        double dotProduct = normal.x * lightDirection.x + normal.y * lightDirection.y + normal.z * lightDirection.z;
-        translatedTriangle.color = (short)(dotProduct * 255);
+        projectedTriangle.point[0] = multiplyMatrixVector(transformedTriangle.point[0], projectionMatrix);
+        projectedTriangle.point[1] = multiplyMatrixVector(transformedTriangle.point[1], projectionMatrix);
+        projectedTriangle.point[2] = multiplyMatrixVector(transformedTriangle.point[2], projectionMatrix);
+        projectedTriangle.color = transformedTriangle.color;
 
-        projectedTriangle.point[0] = multiplyMatrixVector(translatedTriangle.point[0], projectionMatrix);
-        projectedTriangle.point[1] = multiplyMatrixVector(translatedTriangle.point[1], projectionMatrix);
-        projectedTriangle.point[2] = multiplyMatrixVector(translatedTriangle.point[2], projectionMatrix);
-        projectedTriangle.color = translatedTriangle.color;
+        projectedTriangle.point[0] = vectorDivide(projectedTriangle.point[0], projectedTriangle.point[0].w);
+        projectedTriangle.point[1] = vectorDivide(projectedTriangle.point[1], projectedTriangle.point[1].w);
+        projectedTriangle.point[2] = vectorDivide(projectedTriangle.point[2], projectedTriangle.point[2].w);
         
-        projectedTriangle.point[0].x += 1;
-        projectedTriangle.point[0].y += 1;
-        projectedTriangle.point[1].x += 1;
-        projectedTriangle.point[1].y += 1;
-        projectedTriangle.point[2].x += 1;
-        projectedTriangle.point[2].y += 1;
+        Vec3d offsetView = new Vec3d(1, 1, 0);
+        projectedTriangle.point[0] = vectorAdd(projectedTriangle.point[0], offsetView);
+        projectedTriangle.point[1] = vectorAdd(projectedTriangle.point[1], offsetView);
+        projectedTriangle.point[2] = vectorAdd(projectedTriangle.point[2], offsetView);
 
         projectedTriangle.point[0].x *= 0.5 * (double)WIDTH;
         projectedTriangle.point[0].y *= 0.5 * (double)HEIGHT;
@@ -160,9 +119,9 @@ public class Window extends JPanel implements ActionListener {
       double z1 = (t1.point[0].z + t1.point[1].z + t1.point[2].z) / 3;
       double z2 = (t2.point[0].z + t2.point[1].z + t2.point[2].z) / 3;
       if (z1 > z2) {
-        return 1;
+        return -1;
       }
-      return -1;
+      return 1;
     });
 
     for (Triangle projectedTriangles : trianglesToRaster) {
@@ -317,13 +276,12 @@ public class Window extends JPanel implements ActionListener {
 
   public Matrix4x4 matrixMakeProjection(double fov, double aspectRatio, double near, double far) {
     double fovRadians = 1 / Math.tan(Math.toRadians(fov * 0.5));
-    Matrix4x4 matrix = new Matrix4x4();
-    matrix.matrix[0][0] = aspectRatio * fovRadians;
-    matrix.matrix[1][1] = fovRadians;
-    matrix.matrix[2][2] = far / (far - near);
-    matrix.matrix[3][2] = (-far * near) / (far - near);
-    matrix.matrix[2][3] = 1;
-    matrix.matrix[3][3] = 0;
+    Matrix4x4 matrix = new Matrix4x4(new double[][] {
+      {aspectRatio * fovRadians, 0, 0, 0},
+      {0, fovRadians, 0, 0},
+      {0, 0, far / (far - near), 1},
+      {0, 0, (-far * near) / (far - near), 0}
+    });
 
     return matrix;
   }
