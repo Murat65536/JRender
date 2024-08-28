@@ -19,8 +19,8 @@ import java.io.FileNotFoundException;
 import java.util.Scanner;
 
 public class Window extends JPanel implements ActionListener, KeyListener {
-  private final int WIDTH = 1024;
-  private final int HEIGHT = 960;
+  private final int WIDTH = 512;
+  private final int HEIGHT = 512;
   private final BufferedImage BUFFERED_IMAGE;
   private final JLabel J_LABEL = new JLabel();
   private final Timer TIMER = new Timer(10, this);
@@ -45,7 +45,7 @@ public class Window extends JPanel implements ActionListener, KeyListener {
     this.add(J_LABEL);
     TIMER.start();
 
-    meshCube.loadFromObjectFile("axis.obj");
+    meshCube.loadFromObjectFile("mountains.obj");
   }
 
   @Override
@@ -117,9 +117,6 @@ public class Window extends JPanel implements ActionListener, KeyListener {
         clipped[0] = new Triangle();
         clipped[1] = new Triangle();
         clippedTriangles = triangleClipAgainstPlane(new Vec3d(0, 0, 0.1), new Vec3d(0, 0, 1), triangleViewed, clipped[0], clipped[1]);
-        if (clippedTriangles == 2) {
-          System.out.println(clipped[1].color);
-        }
         for (int j = 0; j < clippedTriangles; j++) {
           projectedTriangle.point[0] = multiplyMatrixVector(clipped[j].point[0], projectionMatrix);
           projectedTriangle.point[1] = multiplyMatrixVector(clipped[j].point[1], projectionMatrix);
@@ -167,27 +164,64 @@ public class Window extends JPanel implements ActionListener, KeyListener {
       return 0;
     });
 
-    for (Triangle projectedTriangles : trianglesToRaster) {
-      graphics.setColor(new Color(projectedTriangles.color, projectedTriangles.color, projectedTriangles.color));
-      graphics.fillPolygon(new int[] {
-        (int)projectedTriangles.point[0].x,
-        (int)projectedTriangles.point[1].x,
-        (int)projectedTriangles.point[2].x
-      }, new int[] {
-        (int)projectedTriangles.point[0].y,
-        (int)projectedTriangles.point[1].y,
-        (int)projectedTriangles.point[2].y
-      }, 3);
-      graphics.setColor(Color.RED);
-      graphics.drawPolygon(new int[] {
-        (int)projectedTriangles.point[0].x,
-        (int)projectedTriangles.point[1].x,
-        (int)projectedTriangles.point[2].x
-      }, new int[] {
-        (int)projectedTriangles.point[0].y,
-        (int)projectedTriangles.point[1].y,
-        (int)projectedTriangles.point[2].y
-      }, 3);
+    for (Triangle rasterizedTriangles : trianglesToRaster) {
+      Triangle[] clipped = new Triangle[2];
+      clipped[0] = new Triangle();
+      clipped[1] = new Triangle();
+      ArrayList<Triangle> triangleList = new ArrayList<Triangle>();
+      triangleList.add(rasterizedTriangles);
+      int newTriangles = 1;
+      for (int p = 0; p < 4; p++) {
+        int trianglesToAdd = 0;
+        while (newTriangles > 0) {
+          Triangle test = triangleList.get(0);
+          triangleList.remove(0);
+          newTriangles--;
+
+          switch (p) {
+            case 0:
+              trianglesToAdd = triangleClipAgainstPlane(new Vec3d(0, 0, 0), new Vec3d(0, 1, 0), test, clipped[0], clipped[1]);
+              break;
+            case 1:
+              trianglesToAdd = triangleClipAgainstPlane(new Vec3d(0, (double)HEIGHT - 1, 0), new Vec3d(0, -1, 0), test, clipped[0], clipped[1]);
+              break;
+            case 2:
+              trianglesToAdd = triangleClipAgainstPlane(new Vec3d(0, 0, 0), new Vec3d(1, 0, 0), test, clipped[0], clipped[1]);
+              break;
+            case 3:
+              trianglesToAdd = triangleClipAgainstPlane(new Vec3d((double)WIDTH - 1, 0, 0), new Vec3d(-1, 0, 0), test, clipped[0], clipped[1]);
+              break;
+          }
+
+          for (int w = 0; w < trianglesToAdd; w++) {
+            triangleList.add(clipped[w].clone());
+          }
+        }
+        newTriangles = triangleList.size();
+      }
+
+      for (Triangle triangle : triangleList) {
+        graphics.setColor(new Color(triangle.color, triangle.color, triangle.color));
+        graphics.fillPolygon(new int[] {
+          (int)triangle.point[0].x,
+          (int)triangle.point[1].x,
+          (int)triangle.point[2].x
+        }, new int[] {
+          (int)triangle.point[0].y,
+          (int)triangle.point[1].y,
+          (int)triangle.point[2].y
+        }, 3);
+        graphics.setColor(Color.RED);
+        // graphics.drawPolygon(new int[] {
+        //   (int)triangle.point[0].x,
+        //   (int)triangle.point[1].x,
+        //   (int)triangle.point[2].x
+        // }, new int[] {
+        //   (int)triangle.point[0].y,
+        //   (int)triangle.point[1].y,
+        //   (int)triangle.point[2].y
+        // }, 3);
+      }
     }
 
     graphics.dispose();
