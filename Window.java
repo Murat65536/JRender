@@ -211,7 +211,7 @@ public class Window extends JPanel implements ActionListener, KeyListener {
           (int)triangle.point[1].y,
           (int)triangle.point[2].y
         }, 3);
-        graphics.setColor(Color.RED);
+        // graphics.setColor(Color.RED);
         // graphics.drawPolygon(new int[] {
         //   (int)triangle.point[0].x,
         //   (int)triangle.point[1].x,
