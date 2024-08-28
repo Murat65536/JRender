@@ -8,6 +8,7 @@ public class Main {
       public void run() {
         JFrame frame = new JFrame();
         Window window = new Window();
+        Keys keys = new Keys();
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         frame.add(window);
         frame.pack();
@@ -15,7 +16,7 @@ public class Main {
         frame.setResizable(false);
         frame.setFocusable(true);
         frame.requestFocusInWindow();
-        frame.addKeyListener(window);
+        frame.addKeyListener(keys);
         frame.setVisible(true);
       }
     });

@@ -5,7 +5,6 @@ import java.awt.GridLayout;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.KeyEvent;
-import java.awt.event.KeyListener;
 import java.awt.image.BufferedImage;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -18,7 +17,7 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.util.Scanner;
 
-public class Window extends JPanel implements ActionListener, KeyListener {
+public class Window extends JPanel implements ActionListener {
   private final int WIDTH = 512;
   private final int HEIGHT = 512;
   private final BufferedImage BUFFERED_IMAGE;
@@ -33,8 +32,6 @@ public class Window extends JPanel implements ActionListener, KeyListener {
   private Vec3d camera = new Vec3d();
   private Vec3d lookDirection = new Vec3d();
   private double yaw = 0;
-
-  private static ArrayList<Integer> pressedKeys = new ArrayList<Integer>();
 
   public Window() {
     super(true);
@@ -501,52 +498,40 @@ public class Window extends JPanel implements ActionListener, KeyListener {
   }
 
   public void getKeys() {
-    if (pressedKeys.contains(KeyEvent.VK_UP)) {
-      camera.y += 0.1;
+    if (Keys.pressedKeys.contains(KeyEvent.VK_UP)) {
+      camera.y += 0.2;
     }
 
-    if (pressedKeys.contains(KeyEvent.VK_DOWN)) {
-      camera.y -= 0.1;
+    if (Keys.pressedKeys.contains(KeyEvent.VK_DOWN)) {
+      camera.y -= 0.2;
     }
 
-    if (pressedKeys.contains(KeyEvent.VK_LEFT)) {
-      camera.x -= 0.1;
+    if (Keys.pressedKeys.contains(KeyEvent.VK_LEFT)) {
+      camera.x += 0.2;
     }
 
-    if (pressedKeys.contains(KeyEvent.VK_RIGHT)) {
-      camera.x += 0.1;
+    if (Keys.pressedKeys.contains(KeyEvent.VK_RIGHT)) {
+      camera.x -= 0.2;
     }
 
-    Vec3d forward = vectorMultiply(lookDirection, 0.1);
+    Vec3d forward = vectorMultiply(lookDirection, 0.2);
 
-    if (pressedKeys.contains(KeyEvent.VK_W)) {
+    if (Keys.pressedKeys.contains(KeyEvent.VK_W)) {
       camera = vectorAdd(camera, forward);
     }
 
-    if (pressedKeys.contains(KeyEvent.VK_S)) {
+    if (Keys.pressedKeys.contains(KeyEvent.VK_S)) {
       camera = vectorSubtract(camera, forward);
     }
 
-    if (pressedKeys.contains(KeyEvent.VK_A)) {
-      yaw -= 0.005;
+    if (Keys.pressedKeys.contains(KeyEvent.VK_A)) {
+      yaw -= 0.01;
     }
     
-    if (pressedKeys.contains(KeyEvent.VK_D)) {
-      yaw += 0.005;
+    if (Keys.pressedKeys.contains(KeyEvent.VK_D)) {
+      yaw += 0.01;
     }
   }
-
-  public void keyPressed(KeyEvent event) {
-    if (!pressedKeys.contains(event.getKeyCode())) {
-      pressedKeys.add(event.getKeyCode());
-    }
-  }
-  public void keyReleased(KeyEvent event) {
-    if (pressedKeys.contains(event.getKeyCode())) {
-      pressedKeys.remove(Integer.valueOf(event.getKeyCode()));
-    }
-  }
-  public void keyTyped(KeyEvent event) {}
 
   public static class Vec3d {
     public double x = 0;
