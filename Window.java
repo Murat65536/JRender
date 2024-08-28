@@ -110,43 +110,65 @@ public class Window extends JPanel implements ActionListener, KeyListener {
         triangleViewed.point[0] = matrixMultiplyVector(viewMatrix, transformedTriangle.point[0]);
         triangleViewed.point[1] = matrixMultiplyVector(viewMatrix, transformedTriangle.point[1]);
         triangleViewed.point[2] = matrixMultiplyVector(viewMatrix, transformedTriangle.point[2]);
-
-        projectedTriangle.point[0] = multiplyMatrixVector(triangleViewed.point[0], projectionMatrix);
-        projectedTriangle.point[1] = multiplyMatrixVector(triangleViewed.point[1], projectionMatrix);
-        projectedTriangle.point[2] = multiplyMatrixVector(triangleViewed.point[2], projectionMatrix);
-        projectedTriangle.color = transformedTriangle.color;
-
-        projectedTriangle.point[0] = vectorDivide(projectedTriangle.point[0], projectedTriangle.point[0].w);
-        projectedTriangle.point[1] = vectorDivide(projectedTriangle.point[1], projectedTriangle.point[1].w);
-        projectedTriangle.point[2] = vectorDivide(projectedTriangle.point[2], projectedTriangle.point[2].w);
+        triangleViewed.color = transformedTriangle.color;
         
-        Vec3d offsetView = new Vec3d(1, 1, 0);
-        projectedTriangle.point[0] = vectorAdd(projectedTriangle.point[0], offsetView);
-        projectedTriangle.point[1] = vectorAdd(projectedTriangle.point[1], offsetView);
-        projectedTriangle.point[2] = vectorAdd(projectedTriangle.point[2], offsetView);
+        int clippedTriangles = 0;
+        Triangle[] clipped = new Triangle[2];
+        clipped[0] = new Triangle();
+        clipped[1] = new Triangle();
+        clippedTriangles = triangleClipAgainstPlane(new Vec3d(0, 0, 0.1), new Vec3d(0, 0, 1), triangleViewed, clipped[0], clipped[1]);
+        if (clippedTriangles == 2) {
+          System.out.println(clipped[1].color);
+        }
+        for (int j = 0; j < clippedTriangles; j++) {
+          projectedTriangle.point[0] = multiplyMatrixVector(clipped[j].point[0], projectionMatrix);
+          projectedTriangle.point[1] = multiplyMatrixVector(clipped[j].point[1], projectionMatrix);
+          projectedTriangle.point[2] = multiplyMatrixVector(clipped[j].point[2], projectionMatrix);
+          projectedTriangle.color = clipped[j].color;
 
-        projectedTriangle.point[0].x *= 0.5 * (double)WIDTH;
-        projectedTriangle.point[0].y *= 0.5 * (double)HEIGHT;
-        projectedTriangle.point[1].x *= 0.5 * (double)WIDTH;
-        projectedTriangle.point[1].y *= 0.5 * (double)HEIGHT;
-        projectedTriangle.point[2].x *= 0.5 * (double)WIDTH;
-        projectedTriangle.point[2].y *= 0.5 * (double)HEIGHT;
+          projectedTriangle.point[0] = vectorDivide(projectedTriangle.point[0], projectedTriangle.point[0].w);
+          projectedTriangle.point[1] = vectorDivide(projectedTriangle.point[1], projectedTriangle.point[1].w);
+          projectedTriangle.point[2] = vectorDivide(projectedTriangle.point[2], projectedTriangle.point[2].w);
+        
+          projectedTriangle.point[0].x *= -1;
+          projectedTriangle.point[1].x *= -1;
+          projectedTriangle.point[2].x *= -1;
+          projectedTriangle.point[0].y *= -1;
+          projectedTriangle.point[1].y *= -1;
+          projectedTriangle.point[2].y *= -1;
 
-        trianglesToRaster.add(projectedTriangle);
+
+          Vec3d offsetView = new Vec3d(1, 1, 0);
+          projectedTriangle.point[0] = vectorAdd(projectedTriangle.point[0], offsetView);
+          projectedTriangle.point[1] = vectorAdd(projectedTriangle.point[1], offsetView);
+          projectedTriangle.point[2] = vectorAdd(projectedTriangle.point[2], offsetView);
+
+          projectedTriangle.point[0].x *= 0.5 * (double)WIDTH;
+          projectedTriangle.point[0].y *= 0.5 * (double)HEIGHT;
+          projectedTriangle.point[1].x *= 0.5 * (double)WIDTH;
+          projectedTriangle.point[1].y *= 0.5 * (double)HEIGHT;
+          projectedTriangle.point[2].x *= 0.5 * (double)WIDTH;
+          projectedTriangle.point[2].y *= 0.5 * (double)HEIGHT;
+          trianglesToRaster.add(projectedTriangle.clone());
+        }
       }
     }
 
     Collections.sort(trianglesToRaster, (t1, t2) -> {
       double z1 = (t1.point[0].z + t1.point[1].z + t1.point[2].z) / 3;
       double z2 = (t2.point[0].z + t2.point[1].z + t2.point[2].z) / 3;
+
       if (z1 > z2) {
         return -1;
       }
-      return 1;
+      else if (z1 < z2) {
+        return 1;
+      }
+      return 0;
     });
 
     for (Triangle projectedTriangles : trianglesToRaster) {
-      graphics.setColor(new Color(Math.min(Math.max(projectedTriangles.color, 0), 255), Math.min(Math.max(projectedTriangles.color, 0), 255), Math.min(Math.max(projectedTriangles.color, 0), 255)));
+      graphics.setColor(new Color(projectedTriangles.color, projectedTriangles.color, projectedTriangles.color));
       graphics.fillPolygon(new int[] {
         (int)projectedTriangles.point[0].x,
         (int)projectedTriangles.point[1].x,
@@ -156,16 +178,16 @@ public class Window extends JPanel implements ActionListener, KeyListener {
         (int)projectedTriangles.point[1].y,
         (int)projectedTriangles.point[2].y
       }, 3);
-      // graphics.setColor(Color.BLACK);
-      // graphics.drawPolygon(new int[] {
-      //   (int)projectedTriangles.point[0].x,
-      //   (int)projectedTriangles.point[1].x,
-      //   (int)projectedTriangles.point[2].x
-      // }, new int[] {
-      //   (int)projectedTriangles.point[0].y,
-      //   (int)projectedTriangles.point[1].y,
-      //   (int)projectedTriangles.point[2].y
-      // }, 3);
+      graphics.setColor(Color.RED);
+      graphics.drawPolygon(new int[] {
+        (int)projectedTriangles.point[0].x,
+        (int)projectedTriangles.point[1].x,
+        (int)projectedTriangles.point[2].x
+      }, new int[] {
+        (int)projectedTriangles.point[0].y,
+        (int)projectedTriangles.point[1].y,
+        (int)projectedTriangles.point[2].y
+      }, 3);
     }
 
     graphics.dispose();
@@ -363,7 +385,7 @@ public class Window extends JPanel implements ActionListener, KeyListener {
     planeN = vectorNormalize(planeN);
     double planeD = -vectorDotProduct(planeN, planeP);
     double ad = vectorDotProduct(lineStart, planeN);
-    double bd = vectorDotProduct(lineEnd, lineEnd);
+    double bd = vectorDotProduct(lineEnd, planeN);
     double t = (-planeD - ad) / (bd - ad);
     Vec3d lineStartToEnd = vectorSubtract(lineEnd, lineStart);
     Vec3d lineToIntersect = vectorMultiply(lineStartToEnd, t);
@@ -374,64 +396,69 @@ public class Window extends JPanel implements ActionListener, KeyListener {
   public int triangleClipAgainstPlane(Vec3d planeP, Vec3d planeN, Triangle inTriangle, Triangle outTriangle1, Triangle outTriangle2) {
     planeN = vectorNormalize(planeN);
     Vec3d[] insidePoints = new Vec3d[3];
+    insidePoints[0] = new Vec3d();
+    insidePoints[1] = new Vec3d();
+    insidePoints[2] = new Vec3d();
     int insidePointCount = 0;
     Vec3d[] outsidePoints = new Vec3d[3];
+    outsidePoints[0] = new Vec3d();
+    outsidePoints[1] = new Vec3d();
+    outsidePoints[2] = new Vec3d();
     int outsidePointCount = 0;
 
     double d0 = planeN.x * inTriangle.point[0].x + planeN.y * inTriangle.point[0].y + planeN.z * inTriangle.point[0].z - vectorDotProduct(planeN, planeP);
-    double d1 = planeN.x * inTriangle.point[1].x + planeN.y * inTriangle.point[1].y + planeN.z * inTriangle.point[0].z - vectorDotProduct(planeN, planeP);
-    double d2 = planeN.x * inTriangle.point[2].x + planeN.y * inTriangle.point[2].y + planeN.z * inTriangle.point[0].z - vectorDotProduct(planeN, planeP);
+    double d1 = planeN.x * inTriangle.point[1].x + planeN.y * inTriangle.point[1].y + planeN.z * inTriangle.point[1].z - vectorDotProduct(planeN, planeP);
+    double d2 = planeN.x * inTriangle.point[2].x + planeN.y * inTriangle.point[2].y + planeN.z * inTriangle.point[2].z - vectorDotProduct(planeN, planeP);
 
     if (d0 >= 0) {
-      insidePoints[insidePointCount++] = inTriangle.point[0];
+      insidePoints[insidePointCount++].set(inTriangle.point[0]);
     }
     else {
-      outsidePoints[outsidePointCount++] = inTriangle.point[0];
+      outsidePoints[outsidePointCount++].set(inTriangle.point[0]);
     }
     if (d1 >= 0) {
-      insidePoints[insidePointCount++] = inTriangle.point[1];
+      insidePoints[insidePointCount++].set(inTriangle.point[1]);
     }
     else {
-      outsidePoints[outsidePointCount++] = inTriangle.point[1];
+      outsidePoints[outsidePointCount++].set(inTriangle.point[1]);
     }
     if (d2 >= 0) {
-      insidePoints[insidePointCount++] = inTriangle.point[2];
+      insidePoints[insidePointCount++].set(inTriangle.point[2]);
     }
     else {
-      outsidePoints[outsidePointCount++] = inTriangle.point[2];
+      outsidePoints[outsidePointCount++].set(inTriangle.point[2]);
     }
 
     if (insidePointCount == 0) {
       return 0;
     }
-    if (insidePointCount == 3) {
-      outTriangle1 = inTriangle;
+    else if (insidePointCount == 3) {
+      outTriangle1.set(inTriangle);
 
       return 1;
     }
 
-    if (insidePointCount == 1 && outsidePointCount == 2) {
+    else if (insidePointCount == 1 && outsidePointCount == 2) {
       outTriangle1.color = inTriangle.color;
 
-      outTriangle1.point[0] = insidePoints[0];
-      outTriangle1.point[1] = vectorIntersectPlane(planeP, planeN, insidePoints[0], outsidePoints[0]);
-      outTriangle1.point[2] = vectorIntersectPlane(planeP, planeN, insidePoints[0], outsidePoints[1]);
+      outTriangle1.point[0].set(insidePoints[0]);
+      outTriangle1.point[1].set(vectorIntersectPlane(planeP, planeN, insidePoints[0], outsidePoints[0]));
+      outTriangle1.point[2].set(vectorIntersectPlane(planeP, planeN, insidePoints[0], outsidePoints[1]));
 
       return 1;
     }
 
-    if (insidePointCount == 2 && outsidePointCount == 1) {
+    else if (insidePointCount == 2 && outsidePointCount == 1) {
       outTriangle1.color = inTriangle.color;
-
       outTriangle2.color = inTriangle.color;
 
-      outTriangle1.point[0] = insidePoints[0];
-      outTriangle1.point[1] = insidePoints[1];
-      outTriangle1.point[2] = vectorIntersectPlane(planeP, planeN, insidePoints[0], outsidePoints[0]);
+      outTriangle1.point[0].set(insidePoints[0]);
+      outTriangle1.point[1].set(insidePoints[1]);
+      outTriangle1.point[2].set(vectorIntersectPlane(planeP, planeN, insidePoints[0], outsidePoints[0]));
 
-      outTriangle2.point[0] = insidePoints[1];
-      outTriangle2.point[1] = outTriangle1.point[2];
-      outTriangle2.point[2] = vectorIntersectPlane(planeP, planeN, insidePoints[1], outsidePoints[1]);
+      outTriangle2.point[0].set(insidePoints[1]);
+      outTriangle2.point[1].set(outTriangle1.point[2]);
+      outTriangle2.point[2].set(vectorIntersectPlane(planeP, planeN, insidePoints[1], outsidePoints[0]));
 
       return 2;
     }
@@ -441,22 +468,22 @@ public class Window extends JPanel implements ActionListener, KeyListener {
 
   public void getKeys() {
     if (pressedKeys.contains(KeyEvent.VK_UP)) {
-      camera.y += 0.5;
+      camera.y += 0.1;
     }
 
     if (pressedKeys.contains(KeyEvent.VK_DOWN)) {
-      camera.y -= 0.5;
+      camera.y -= 0.1;
     }
 
     if (pressedKeys.contains(KeyEvent.VK_LEFT)) {
-      camera.x -= 0.5;
+      camera.x -= 0.1;
     }
 
     if (pressedKeys.contains(KeyEvent.VK_RIGHT)) {
-      camera.x += 0.5;
+      camera.x += 0.1;
     }
 
-    Vec3d forward = vectorMultiply(lookDirection, 0.5);
+    Vec3d forward = vectorMultiply(lookDirection, 0.1);
 
     if (pressedKeys.contains(KeyEvent.VK_W)) {
       camera = vectorAdd(camera, forward);
@@ -467,11 +494,11 @@ public class Window extends JPanel implements ActionListener, KeyListener {
     }
 
     if (pressedKeys.contains(KeyEvent.VK_A)) {
-      yaw -= 0.01;
+      yaw -= 0.005;
     }
     
     if (pressedKeys.contains(KeyEvent.VK_D)) {
-      yaw += 0.01;
+      yaw += 0.005;
     }
   }
 
@@ -508,6 +535,13 @@ public class Window extends JPanel implements ActionListener, KeyListener {
     public Vec3d clone() {
       return new Vec3d(x, y, z);
     }
+
+    public void set(Vec3d vector) {
+      x = vector.x;
+      y = vector.y;
+      z = vector.z;
+      w = vector.w;
+    }
   }
 
   public static class Triangle {
@@ -518,6 +552,13 @@ public class Window extends JPanel implements ActionListener, KeyListener {
       point[0] = new Vec3d(x1, y1, z1);
       point[1] = new Vec3d(x2, y2, z2);
       point[2] = new Vec3d(x3, y3, z3);
+    }
+
+    public Triangle(double x1, double y1, double z1, double x2, double y2, double z2, double x3, double y3, double z3, short color) {
+      point[0] = new Vec3d(x1, y1, z1);
+      point[1] = new Vec3d(x2, y2, z2);
+      point[2] = new Vec3d(x3, y3, z3);
+      this.color = color;
     }
 
     public Triangle(Vec3d point1, Vec3d point2, Vec3d point3) {
@@ -536,8 +577,19 @@ public class Window extends JPanel implements ActionListener, KeyListener {
       return new Triangle(
         point[0].x, point[0].y, point[0].z,
         point[1].x, point[1].y, point[1].z,
-        point[2].x, point[2].y, point[2].z
+        point[2].x, point[2].y, point[2].z,
+        color
       );
+    }
+    public void set(Triangle triangle) {
+      point[0].set(triangle.point[0]);
+      point[1].set(triangle.point[1]);
+      point[2].set(triangle.point[2]);
+      color = triangle.color;
+    }
+
+    public void setColor(Triangle triangle) {
+      color = triangle.color;
     }
   }
 
