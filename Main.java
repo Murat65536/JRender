@@ -9,7 +9,7 @@ public class Main {
         JFrame frame = new JFrame();
         Window window = new Window();
         Keys keys = new Keys();
-        Mouse mouse = new Mouse();
+        Mouse mouse = new Mouse(frame);
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         frame.add(window);
         frame.pack();

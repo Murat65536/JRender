@@ -8,7 +8,6 @@ public class Vec3d {
     this.x = x;
     this.y = y;
     this.z = z;
-    this.w = 1;
   }
 
   public Vec3d(double x, double y, double z, double w) {
@@ -18,12 +17,7 @@ public class Vec3d {
     this.w = w;
   }
 
-  public Vec3d() {
-    this.x = 0;
-    this.y = 0;
-    this.z = 0;
-    this.w = 1;
-  }
+  public Vec3d() {}
 
   public Vec3d clone() {
     return new Vec3d(x, y, z, w);

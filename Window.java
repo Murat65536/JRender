@@ -16,12 +16,12 @@ import javax.swing.JPanel;
 public class Window extends JPanel implements ActionListener {
   private final int WIDTH = 512;
   private final int HEIGHT = 512;
-  private final double MOUSE_SENSITIVITY = 4;
-  private final double MOVEMENT_SPEED = 60;
+  private final double MOUSE_SENSITIVITY = 2;
+  private final double MOVEMENT_SPEED = 160;
   private final double FOV = 90;
   private final BufferedImage bufferedImage;
   private final JLabel jLabel = new JLabel();
-  private final Timer timer = new Timer(0, this);
+  private final Timer timer = new Timer(10, this);
   private static final Mesh mesh = new Mesh();
   private final Matrix projectionMatrix = projectionMatrix(FOV, (double)HEIGHT / WIDTH, 0.1, 1000);
   private Vec3d camera = new Vec3d();
@@ -49,12 +49,12 @@ public class Window extends JPanel implements ActionListener {
     Graphics2D graphics = bufferedImage.createGraphics();
     graphics.setColor(Color.BLACK);
     graphics.fillRect(0, 0, WIDTH, HEIGHT);
-    Matrix worldMatrix = translationMatrix(0, 0, 0);
+    Matrix worldMatrix = translationMatrix(0, -10, 0);
     Vec3d up = new Vec3d(0, 1, 0);
     Vec3d target = new Vec3d(0, 0, 1);
     Matrix rotationMatrix = rotationMatrixY(yaw);
     lookDirection = multiplyMatrixVector(rotationMatrix, target);
-    sideDirection = multiplyMatrixVector(rotationMatrix, subtractVector(target, new Vec3d(1, 0, 1)));
+    sideDirection = multiplyMatrixVector(rotationMatrix, new Vec3d(-1, 0, 0));
     target = addVector(camera, lookDirection);
     Matrix cameraMatrix = matrixPoint(camera, target, up);
     Matrix viewMatrix = quickInverseMatrix(cameraMatrix);
@@ -120,7 +120,6 @@ public class Window extends JPanel implements ActionListener {
           projectedTriangle.point[1].y *= -1;
           projectedTriangle.point[2].y *= -1;
 
-
           Vec3d offsetView = new Vec3d(1, 1, 0);
           projectedTriangle.point[0] = addVector(projectedTriangle.point[0], offsetView);
           projectedTriangle.point[1] = addVector(projectedTriangle.point[1], offsetView);
@@ -169,13 +168,13 @@ public class Window extends JPanel implements ActionListener {
               trianglesToAdd = trianglePlaneClip(new Vec3d(0, 0, 0), new Vec3d(0, 1, 0), test, clipped[0], clipped[1]);
               break;
             case 1:
-              trianglesToAdd = trianglePlaneClip(new Vec3d(0, (double)HEIGHT - 1, 0), new Vec3d(0, -1, 0), test, clipped[0], clipped[1]);
+              trianglesToAdd = trianglePlaneClip(new Vec3d(0, HEIGHT - 1, 0), new Vec3d(0, -1, 0), test, clipped[0], clipped[1]);
               break;
             case 2:
               trianglesToAdd = trianglePlaneClip(new Vec3d(0, 0, 0), new Vec3d(1, 0, 0), test, clipped[0], clipped[1]);
               break;
             case 3:
-              trianglesToAdd = trianglePlaneClip(new Vec3d((double)WIDTH - 1, 0, 0), new Vec3d(-1, 0, 0), test, clipped[0], clipped[1]);
+              trianglesToAdd = trianglePlaneClip(new Vec3d(WIDTH - 1, 0, 0), new Vec3d(-1, 0, 0), test, clipped[0], clipped[1]);
               break;
           }
 
