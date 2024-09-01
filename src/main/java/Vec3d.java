@@ -6,22 +6,22 @@ public class Vec3d {
   protected float z = 0;
   protected float w = 1;
 
-  protected Vec3d(float x, float y, float z) {
+  public Vec3d(float x, float y, float z) {
     this.x = x;
     this.y = y;
     this.z = z;
   }
 
-  protected Vec3d(float x, float y, float z, float w) {
+  public Vec3d(float x, float y, float z, float w) {
     this.x = x;
     this.y = y;
     this.z = z;
     this.w = w;
   }
 
-  protected Vec3d() {}
+  public Vec3d() {}
 
-  protected Vec3d clone() {
+  public Vec3d clone() {
     return new Vec3d(x, y, z, w);
   }
 

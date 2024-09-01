@@ -10,11 +10,11 @@ public class Mesh {
   protected ArrayList<Triangle> triangles = new ArrayList<Triangle>();
   protected ArrayList<Vec3d> vertexNormals = new ArrayList<Vec3d>();
 
-  protected Mesh(List<Triangle> triangles) {
+  public Mesh(List<Triangle> triangles) {
     this.triangles.addAll(triangles);
   }
 
-  protected Mesh() {}
+  public Mesh() {}
 
   protected void load(String fileName) {
     try {

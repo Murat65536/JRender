@@ -16,7 +16,7 @@ public class Mouse implements MouseListener, MouseMotionListener {
   private Point mousePoint = new Point();
   private JFrame frame;
 
-  protected Mouse(JFrame frame) {
+  public Mouse(JFrame frame) {
     this.frame = frame;
   }
 

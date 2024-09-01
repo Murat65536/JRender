@@ -35,7 +35,7 @@ public class Window extends JPanel implements ActionListener {
   private FPS fps = new FPS();
   private Graphics2D graphics;
 
-  protected Window() {
+  public Window() {
     super(true);
     this.setLayout(new GridLayout());
     this.setPreferredSize(new Dimension(WIDTH, HEIGHT));
