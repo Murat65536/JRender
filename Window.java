@@ -82,11 +82,6 @@ public class Window extends JPanel implements ActionListener {
       normal = vectorCrossProduct(line1, line2);
       normal = normalizeVector(normal);
 
-      float normalLength = (float)Math.sqrt(normal.x * normal.x + normal.y * normal.y + normal.z * normal.z);
-      normal.x /= normalLength;
-      normal.y /= normalLength;
-      normal.z /= normalLength;
-
       Vec3d cameraRay = subtractVector(transformedTriangle.point[0], camera);
 
       if (vectorDotProduct(normal, cameraRay) < 0) {
@@ -246,11 +241,11 @@ public class Window extends JPanel implements ActionListener {
 
   private float vectorLength(Vec3d v) {
     float number = vectorDotProduct(v, v);
-    float xHalf = 0.5f * number;
+    float half = 0.5f * number;
     int i = Float.floatToIntBits(number);
     i = 0x5f3759df - (i >> 1);
     number = Float.intBitsToFloat(i);
-    number *= (1.5f - xHalf * number * number);
+    number *= (1.5f - half * number * number);
     return number;
   }
 
@@ -260,12 +255,7 @@ public class Window extends JPanel implements ActionListener {
   }
 
   private Vec3d vectorCrossProduct(Vec3d v1, Vec3d v2) {
-    Vec3d v = new Vec3d();
-    v.x = v1.y * v2.z - v1.z * v2.y;
-    v.y = v1.z * v2.x - v1.x * v2.z;
-    v.z = v1.x * v2.y - v1.y * v2.x;
-
-    return v;
+    return new Vec3d(v1.y * v2.z - v1.z * v2.y, v1.z * v2.x - v1.x * v2.z, v1.x * v2.y - v1.y * v2.x);
   }
 
   private Matrix rotationMatrixX(float angle) {

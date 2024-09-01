@@ -6,6 +6,7 @@ import java.util.Scanner;
 
 public class Mesh {
   protected ArrayList<Triangle> triangles = new ArrayList<Triangle>();
+  protected ArrayList<Vec3d> vertexNormals = new ArrayList<Vec3d>();
 
   public Mesh(List<Triangle> triangles) {
     this.triangles.addAll(triangles);
@@ -18,12 +19,11 @@ public class Mesh {
       File file = new File(fileName);
       Scanner reader = new Scanner(file);
       ArrayList<Vec3d> vertices = new ArrayList<Vec3d>();
-      ArrayList<Vec3d> vertexNormals = new ArrayList<Vec3d>();
       while (reader.hasNextLine()) {
         String data = reader.nextLine();
         String[] splitData = data.split(" ");
 
-        // TODO Use vn and vt instead of calculating them.... Somehow.
+        // TODO Use vn and vt instead of calculating them
         if (data.length() > 0) {
           if (data.substring(0, 2).equals("v ")) {
             vertices.add(new Vec3d(Float.parseFloat(splitData[1]), Float.parseFloat(splitData[2]), Float.parseFloat(splitData[3])));
