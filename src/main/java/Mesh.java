@@ -1,3 +1,5 @@
+package src.main.java;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.io.File;
@@ -8,11 +10,11 @@ public class Mesh {
   protected ArrayList<Triangle> triangles = new ArrayList<Triangle>();
   protected ArrayList<Vec3d> vertexNormals = new ArrayList<Vec3d>();
 
-  public Mesh(List<Triangle> triangles) {
+  protected Mesh(List<Triangle> triangles) {
     this.triangles.addAll(triangles);
   }
 
-  public Mesh() {}
+  protected Mesh() {}
 
   protected void load(String fileName) {
     try {

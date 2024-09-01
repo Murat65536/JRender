@@ -1,3 +1,5 @@
+package src.main.java;
+
 import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.Graphics2D;
@@ -6,6 +8,7 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.KeyEvent;
 import java.awt.image.BufferedImage;
+import java.awt.RenderingHints;
 import java.util.ArrayList;
 import java.util.Collections;
 import javax.swing.Timer;
@@ -30,6 +33,7 @@ public class Window extends JPanel implements ActionListener {
   private float pitch = 0;
   private float yaw = 0;
   private FPS fps = new FPS();
+  private Graphics2D graphics;
 
   protected Window() {
     super(true);
@@ -39,7 +43,10 @@ public class Window extends JPanel implements ActionListener {
     jLabel.setIcon(new ImageIcon(bufferedImage));
     this.add(jLabel);
     timer.start();
-    mesh.load("assets/test.obj");
+    mesh.load("src/main/resources/test.obj");
+    graphics = bufferedImage.createGraphics();
+    graphics.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_SPEED);
+    graphics.setRenderingHint(RenderingHints.KEY_COLOR_RENDERING, RenderingHints.VALUE_COLOR_RENDER_SPEED);
   }
 
   @Override
@@ -47,17 +54,16 @@ public class Window extends JPanel implements ActionListener {
     System.out.println(fps.getFPS());
     getKeys();
     getMouse();
-    Graphics2D graphics = bufferedImage.createGraphics();
     graphics.setColor(Color.BLACK);
     graphics.fillRect(0, 0, WIDTH, HEIGHT);
     Matrix worldMatrix = translationMatrix(0, 0, 5);
     Vec3d up = new Vec3d(0, 1, 0);
     Vec3d target = new Vec3d(0, 0, 1);
     Vec3d side = new Vec3d(-1, 0, 0);
-    Matrix xRotationMatrix = rotationMatrixX(pitch);
-    Matrix yRotationMatrix = rotationMatrixY(yaw);
-    lookDirection = multiplyMatrixVector(matrixMultiplyMatrix(xRotationMatrix, yRotationMatrix), target);
-    sideDirection = multiplyMatrixVector(matrixMultiplyMatrix(xRotationMatrix, yRotationMatrix), side);
+    Matrix rotationX = rotationMatrixX(pitch);
+    Matrix rotationY = rotationMatrixY(yaw);
+    lookDirection = multiplyMatrixVector(matrixMultiplyMatrix(rotationX, rotationY), target);
+    sideDirection = multiplyMatrixVector(matrixMultiplyMatrix(rotationX, rotationY), side);
     target = addVector(camera, lookDirection);
     Matrix cameraMatrix = matrixPoint(camera, target, up);
     Matrix viewMatrix = quickInverseMatrix(cameraMatrix);
@@ -206,8 +212,6 @@ public class Window extends JPanel implements ActionListener {
         // }, 3);
       }
     }
-
-    graphics.dispose();
     jLabel.repaint();
     fps.update();
   }

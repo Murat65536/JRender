@@ -1,3 +1,5 @@
+package src.main.java;
+
 public class FPS {
   private long lastTime;
   private float fps;

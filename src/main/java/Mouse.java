@@ -1,3 +1,5 @@
+package src.main.java;
+
 import java.awt.Cursor;
 import java.awt.Point;
 import java.awt.event.MouseEvent;
@@ -14,7 +16,7 @@ public class Mouse implements MouseListener, MouseMotionListener {
   private Point mousePoint = new Point();
   private JFrame frame;
 
-  public Mouse(JFrame frame) {
+  protected Mouse(JFrame frame) {
     this.frame = frame;
   }
 

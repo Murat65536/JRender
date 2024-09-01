@@ -1,3 +1,5 @@
+package src.main.java;
+
 import java.awt.EventQueue;
 import javax.swing.JFrame;
 
