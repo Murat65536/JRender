@@ -17,7 +17,7 @@ public class Window extends JPanel implements ActionListener {
   private final short WIDTH = 512;
   private final short HEIGHT = 512;
   private final float MOUSE_SENSITIVITY = 2;
-  private final float MOVEMENT_SPEED = 160;
+  private final float MOVEMENT_SPEED = 20;
   private final float FOV = 90;
   private final BufferedImage bufferedImage;
   private final JLabel jLabel = new JLabel();
@@ -27,6 +27,7 @@ public class Window extends JPanel implements ActionListener {
   private Vec3d camera = new Vec3d();
   private Vec3d lookDirection = new Vec3d();
   private Vec3d sideDirection = new Vec3d();
+  private float pitch = 0;
   private float yaw = 0;
   private FPS fps = new FPS();
 
@@ -38,23 +39,25 @@ public class Window extends JPanel implements ActionListener {
     jLabel.setIcon(new ImageIcon(bufferedImage));
     this.add(jLabel);
     timer.start();
-    mesh.load("assets/mountains.obj");
+    mesh.load("assets/test.obj");
   }
 
   @Override
   public void actionPerformed(ActionEvent event) {
-    // System.out.println(fps.getFPS());
+    System.out.println(fps.getFPS());
     getKeys();
     getMouse();
     Graphics2D graphics = bufferedImage.createGraphics();
     graphics.setColor(Color.BLACK);
     graphics.fillRect(0, 0, WIDTH, HEIGHT);
-    Matrix worldMatrix = translationMatrix(0, -10, 0);
+    Matrix worldMatrix = translationMatrix(0, 0, 5);
     Vec3d up = new Vec3d(0, 1, 0);
     Vec3d target = new Vec3d(0, 0, 1);
-    Matrix rotationMatrix = rotationMatrixY(yaw);
-    lookDirection = multiplyMatrixVector(rotationMatrix, target);
-    sideDirection = multiplyMatrixVector(rotationMatrix, new Vec3d(-1, 0, 0));
+    Vec3d side = new Vec3d(-1, 0, 0);
+    Matrix xRotationMatrix = rotationMatrixX(pitch);
+    Matrix yRotationMatrix = rotationMatrixY(yaw);
+    lookDirection = multiplyMatrixVector(matrixMultiplyMatrix(xRotationMatrix, yRotationMatrix), target);
+    sideDirection = multiplyMatrixVector(matrixMultiplyMatrix(xRotationMatrix, yRotationMatrix), side);
     target = addVector(camera, lookDirection);
     Matrix cameraMatrix = matrixPoint(camera, target, up);
     Matrix viewMatrix = quickInverseMatrix(cameraMatrix);
@@ -137,8 +140,8 @@ public class Window extends JPanel implements ActionListener {
     }
 
     Collections.sort(trianglesToRaster, (t1, t2) -> {
-      float z1 = (t1.point[0].z + t1.point[1].z + t1.point[2].z) / 3;
-      float z2 = (t2.point[0].z + t2.point[1].z + t2.point[2].z) / 3;
+      float z1 = t1.point[0].z + t1.point[1].z + t1.point[2].z;
+      float z2 = t2.point[0].z + t2.point[1].z + t2.point[2].z;
 
       if (z1 > z2) {
         return -1;
@@ -242,12 +245,18 @@ public class Window extends JPanel implements ActionListener {
   }
 
   private float vectorLength(Vec3d v) {
-    return (float)Math.sqrt(vectorDotProduct(v, v));
+    float number = vectorDotProduct(v, v);
+    float xHalf = 0.5f * number;
+    int i = Float.floatToIntBits(number);
+    i = 0x5f3759df - (i >> 1);
+    number = Float.intBitsToFloat(i);
+    number *= (1.5f - xHalf * number * number);
+    return number;
   }
 
   private Vec3d normalizeVector(Vec3d v) {
     float l = vectorLength(v);
-    return new Vec3d(v.x / l, v.y / l, v.z / l);
+    return new Vec3d(v.x * l, v.y * l, v.z * l);
   }
 
   private Vec3d vectorCrossProduct(Vec3d v1, Vec3d v2) {
@@ -259,7 +268,6 @@ public class Window extends JPanel implements ActionListener {
     return v;
   }
 
-  @SuppressWarnings("unused")
   private Matrix rotationMatrixX(float angle) {
     Matrix matrix = new Matrix();
     matrix.matrix[0][0] = 1;
@@ -319,6 +327,16 @@ public class Window extends JPanel implements ActionListener {
       {0, 0, (-far * near) / (far - near), 0}
     });
 
+    return matrix;
+  }
+
+  private Matrix matrixMultiplyMatrix(Matrix m1, Matrix m2) {
+    Matrix matrix = new Matrix();
+    for (byte c = 0; c < 4; c++) {
+      for (byte r = 0; r < 4; r++) {
+        matrix.matrix[r][c] = m1.matrix[r][0] * m2.matrix[0][c] + m1.matrix[r][1] * m2.matrix[1][c] + m1.matrix[r][2] * m2.matrix[2][c] + m1.matrix[r][3] * m2.matrix[3][c];
+      }
+    }
     return matrix;
   }
 
@@ -480,6 +498,7 @@ public class Window extends JPanel implements ActionListener {
   }
   
   private void getMouse() {
+    pitch = Mouse.origin.y * MOUSE_SENSITIVITY / HEIGHT;
     yaw = Mouse.origin.x * MOUSE_SENSITIVITY / WIDTH;
   }
 }

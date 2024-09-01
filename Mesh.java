@@ -18,21 +18,21 @@ public class Mesh {
       File file = new File(fileName);
       Scanner reader = new Scanner(file);
       ArrayList<Vec3d> vertices = new ArrayList<Vec3d>();
+      ArrayList<Vec3d> vertexNormals = new ArrayList<Vec3d>();
       while (reader.hasNextLine()) {
         String data = reader.nextLine();
         String[] splitData = data.split(" ");
 
+        // TODO Use vn and vt instead of calculating them.... Somehow.
         if (data.length() > 0) {
           if (data.substring(0, 2).equals("v ")) {
-            Vec3d vector = new Vec3d(Float.parseFloat(splitData[1]), Float.parseFloat(splitData[2]), Float.parseFloat(splitData[3]));
-            vertices.add(vector);
+            vertices.add(new Vec3d(Float.parseFloat(splitData[1]), Float.parseFloat(splitData[2]), Float.parseFloat(splitData[3])));
           }
           else if (data.substring(0, 2).equals("f ")) {
-            int[] faces = new int[3];
-            faces[0] = Integer.parseInt(splitData[1].split("/")[0]);
-            faces[1] = Integer.parseInt(splitData[2].split("/")[0]);
-            faces[2] = Integer.parseInt(splitData[3].split("/")[0]);
-            triangles.add(new Triangle(vertices.get(faces[0] - 1), vertices.get(faces[1] - 1), vertices.get(faces[2] - 1)));
+            triangles.add(new Triangle(vertices.get(Integer.parseInt(splitData[1].split("/")[0]) - 1), vertices.get(Integer.parseInt(splitData[2].split("/")[0]) - 1), vertices.get(Integer.parseInt(splitData[3].split("/")[0]) - 1)));
+          }
+          else if (data.substring(0, 3).equals("vn ")) {
+            vertexNormals.add(new Vec3d(Float.parseFloat(splitData[1]), Float.parseFloat(splitData[2]), Float.parseFloat(splitData[3])));
           }
         }
       }
