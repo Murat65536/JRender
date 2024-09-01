@@ -2,17 +2,17 @@ public class Triangle {
   protected Vec3d[] point = new Vec3d[3];
   protected short color = 0;
 
-  public Triangle(double x1, double y1, double z1,
-                  double x2, double y2, double z2,
-                  double x3, double y3, double z3) {
+  public Triangle(float x1, float y1, float z1,
+                  float x2, float y2, float z2,
+                  float x3, float y3, float z3) {
     point[0] = new Vec3d(x1, y1, z1);
     point[1] = new Vec3d(x2, y2, z2);
     point[2] = new Vec3d(x3, y3, z3);
   }
 
-  public Triangle(double x1, double y1, double z1,
-                  double x2, double y2, double z2,
-                  double x3, double y3, double z3,
+  public Triangle(float x1, float y1, float z1,
+                  float x2, float y2, float z2,
+                  float x3, float y3, float z3,
                   short color) {
     point[0] = new Vec3d(x1, y1, z1);
     point[1] = new Vec3d(x2, y2, z2);
@@ -20,9 +20,9 @@ public class Triangle {
     this.color = color;
   }
 
-  public Triangle(double x1, double y1, double z1, double w1,
-                  double x2, double y2, double z2, double w2,
-                  double x3, double y3, double z3, double w3,
+  public Triangle(float x1, float y1, float z1, float w1,
+                  float x2, float y2, float z2, float w2,
+                  float x3, float y3, float z3, float w3,
                   short color) {
     point[0] = new Vec3d(x1, y1, z1, w1);
     point[1] = new Vec3d(x2, y2, z2, w2);
@@ -42,7 +42,7 @@ public class Triangle {
     point[2] = new Vec3d();
   }
 
-  public Triangle clone() {
+  protected Triangle clone() {
     return new Triangle(
       point[0].x, point[0].y, point[0].z,
       point[1].x, point[1].y, point[1].z,
@@ -50,14 +50,14 @@ public class Triangle {
       color
     );
   }
-  public void set(Triangle triangle) {
+  protected void set(Triangle triangle) {
     point[0].set(triangle.point[0]);
     point[1].set(triangle.point[1]);
     point[2].set(triangle.point[2]);
     color = triangle.color;
   }
 
-  public void setColor(Triangle triangle) {
+  protected void setColor(Triangle triangle) {
     color = triangle.color;
   }
 }

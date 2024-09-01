@@ -1,13 +1,13 @@
 public class FPS {
   private long lastTime;
-  private double fps;
+  private float fps;
 
   protected void update() {
-    fps = 1000000000d / (System.nanoTime() - lastTime);
+    fps = 1000000000f / (System.nanoTime() - lastTime);
     lastTime = System.nanoTime();
   }
 
-  protected double getFPS() {
+  protected float getFPS() {
     return fps;
   }
 }

@@ -32,8 +32,8 @@ public class Mouse implements MouseListener, MouseMotionListener {
   
   public void mouseMoved(MouseEvent event) {}
   public void mouseDragged(MouseEvent event) {
-    int directionX = event.getX() - mousePoint.x;
-    int directionY = event.getY() - mousePoint.y;
+    short directionX = (short)(event.getX() - mousePoint.x);
+    short directionY = (short)(event.getY() - mousePoint.y);
     origin.setLocation(origin.x + directionX, origin.y + directionY);
     try {
       new Robot().mouseMove(mousePoint.x, mousePoint.y);

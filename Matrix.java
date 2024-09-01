@@ -1,7 +1,7 @@
 public class Matrix {
-  protected double[][] matrix = new double[4][4];
+  protected float[][] matrix = new float[4][4];
 
-  public Matrix(double[][] matrix) {
+  public Matrix(float[][] matrix) {
     this.matrix = matrix;
   }
 

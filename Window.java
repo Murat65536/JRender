@@ -14,20 +14,20 @@ import javax.swing.JLabel;
 import javax.swing.JPanel;
 
 public class Window extends JPanel implements ActionListener {
-  private final int WIDTH = 512;
-  private final int HEIGHT = 512;
-  private final double MOUSE_SENSITIVITY = 2;
-  private final double MOVEMENT_SPEED = 160;
-  private final double FOV = 90;
+  private final short WIDTH = 512;
+  private final short HEIGHT = 512;
+  private final float MOUSE_SENSITIVITY = 2;
+  private final float MOVEMENT_SPEED = 160;
+  private final float FOV = 90;
   private final BufferedImage bufferedImage;
   private final JLabel jLabel = new JLabel();
-  private final Timer timer = new Timer(10, this);
+  private final Timer timer = new Timer(0, this);
   private static final Mesh mesh = new Mesh();
-  private final Matrix projectionMatrix = projectionMatrix(FOV, (double)HEIGHT / WIDTH, 0.1, 1000);
+  private final Matrix projectionMatrix = projectionMatrix(FOV, (float)HEIGHT / WIDTH, 0.1f, 1000);
   private Vec3d camera = new Vec3d();
   private Vec3d lookDirection = new Vec3d();
   private Vec3d sideDirection = new Vec3d();
-  private double yaw = 0;
+  private float yaw = 0;
   private FPS fps = new FPS();
 
   protected Window() {
@@ -79,7 +79,7 @@ public class Window extends JPanel implements ActionListener {
       normal = vectorCrossProduct(line1, line2);
       normal = normalizeVector(normal);
 
-      double normalLength = Math.sqrt(normal.x * normal.x + normal.y * normal.y + normal.z * normal.z);
+      float normalLength = (float)Math.sqrt(normal.x * normal.x + normal.y * normal.y + normal.z * normal.z);
       normal.x /= normalLength;
       normal.y /= normalLength;
       normal.z /= normalLength;
@@ -90,7 +90,7 @@ public class Window extends JPanel implements ActionListener {
 
         Vec3d lightDirection = new Vec3d(0, 0, -1);
         lightDirection = normalizeVector(lightDirection);
-        double dotProduct = Math.max(0.1, vectorDotProduct(lightDirection, normal));
+        float dotProduct = Math.max(0.1f, vectorDotProduct(lightDirection, normal));
         transformedTriangle.color = (short)(dotProduct * 255);
 
         triangleViewed.point[0] = multiplyMatrixVector(viewMatrix, transformedTriangle.point[0]);
@@ -98,12 +98,12 @@ public class Window extends JPanel implements ActionListener {
         triangleViewed.point[2] = multiplyMatrixVector(viewMatrix, transformedTriangle.point[2]);
         triangleViewed.color = transformedTriangle.color;
         
-        int clippedTriangles = 0;
+        byte clippedTriangles = 0;
         Triangle[] clipped = new Triangle[2];
         clipped[0] = new Triangle();
         clipped[1] = new Triangle();
-        clippedTriangles = trianglePlaneClip(new Vec3d(0, 0, 0.1), new Vec3d(0, 0, 1), triangleViewed, clipped[0], clipped[1]);
-        for (int j = 0; j < clippedTriangles; j++) {
+        clippedTriangles = trianglePlaneClip(new Vec3d(0, 0, 0.1f), new Vec3d(0, 0, 1), triangleViewed, clipped[0], clipped[1]);
+        for (byte j = 0; j < clippedTriangles; j++) {
           projectedTriangle.point[0] = multiplyMatrixVector(projectionMatrix, clipped[j].point[0]);
           projectedTriangle.point[1] = multiplyMatrixVector(projectionMatrix, clipped[j].point[1]);
           projectedTriangle.point[2] = multiplyMatrixVector(projectionMatrix, clipped[j].point[2]);
@@ -125,20 +125,20 @@ public class Window extends JPanel implements ActionListener {
           projectedTriangle.point[1] = addVector(projectedTriangle.point[1], offsetView);
           projectedTriangle.point[2] = addVector(projectedTriangle.point[2], offsetView);
 
-          projectedTriangle.point[0].x *= 0.5 * (double)WIDTH;
-          projectedTriangle.point[0].y *= 0.5 * (double)HEIGHT;
-          projectedTriangle.point[1].x *= 0.5 * (double)WIDTH;
-          projectedTriangle.point[1].y *= 0.5 * (double)HEIGHT;
-          projectedTriangle.point[2].x *= 0.5 * (double)WIDTH;
-          projectedTriangle.point[2].y *= 0.5 * (double)HEIGHT;
+          projectedTriangle.point[0].x *= 0.5 * WIDTH;
+          projectedTriangle.point[0].y *= 0.5 * HEIGHT;
+          projectedTriangle.point[1].x *= 0.5 * WIDTH;
+          projectedTriangle.point[1].y *= 0.5 * HEIGHT;
+          projectedTriangle.point[2].x *= 0.5 * WIDTH;
+          projectedTriangle.point[2].y *= 0.5 * HEIGHT;
           trianglesToRaster.add(projectedTriangle.clone());
         }
       }
     }
 
     Collections.sort(trianglesToRaster, (t1, t2) -> {
-      double z1 = (t1.point[0].z + t1.point[1].z + t1.point[2].z) / 3;
-      double z2 = (t2.point[0].z + t2.point[1].z + t2.point[2].z) / 3;
+      float z1 = (t1.point[0].z + t1.point[1].z + t1.point[2].z) / 3;
+      float z2 = (t2.point[0].z + t2.point[1].z + t2.point[2].z) / 3;
 
       if (z1 > z2) {
         return -1;
@@ -156,8 +156,8 @@ public class Window extends JPanel implements ActionListener {
       ArrayList<Triangle> triangleList = new ArrayList<Triangle>();
       triangleList.add(rasterizedTriangles);
       int newTriangles = 1;
-      for (int p = 0; p < 4; p++) {
-        int trianglesToAdd = 0;
+      for (byte p = 0; p < 4; p++) {
+        byte trianglesToAdd = 0;
         while (newTriangles > 0) {
           Triangle test = triangleList.get(0);
           triangleList.remove(0);
@@ -188,23 +188,23 @@ public class Window extends JPanel implements ActionListener {
       for (Triangle triangle : triangleList) {
         graphics.setColor(new Color(triangle.color, triangle.color, triangle.color));
         graphics.fillPolygon(new int[] {
-          (int)triangle.point[0].x,
-          (int)triangle.point[1].x,
-          (int)triangle.point[2].x
+          (short)triangle.point[0].x,
+          (short)triangle.point[1].x,
+          (short)triangle.point[2].x
         }, new int[] {
-          (int)triangle.point[0].y,
-          (int)triangle.point[1].y,
-          (int)triangle.point[2].y
+          (short)triangle.point[0].y,
+          (short)triangle.point[1].y,
+          (short)triangle.point[2].y
         }, 3);
         // graphics.setColor(Color.RED);
         // graphics.drawPolygon(new int[] {
-        //   (int)triangle.point[0].x,
-        //   (int)triangle.point[1].x,
-        //   (int)triangle.point[2].x
+        //   (short)triangle.point[0].x,
+        //   (short)triangle.point[1].x,
+        //   (short)triangle.point[2].x
         // }, new int[] {
-        //   (int)triangle.point[0].y,
-        //   (int)triangle.point[1].y,
-        //   (int)triangle.point[2].y
+        //   (short)triangle.point[0].y,
+        //   (short)triangle.point[1].y,
+        //   (short)triangle.point[2].y
         // }, 3);
       }
     }
@@ -215,10 +215,10 @@ public class Window extends JPanel implements ActionListener {
   }
 
   private Vec3d multiplyMatrixVector(Matrix m, Vec3d i) {
-    return new Vec3d(i.x * m.matrix[0][0] + i.y * m.matrix[1][0] + i.z * m.matrix[2][0] + i.w * m.matrix[3][0],
-                     i.x * m.matrix[0][1] + i.y * m.matrix[1][1] + i.z * m.matrix[2][1] + i.w * m.matrix[3][1],
-                     i.x * m.matrix[0][2] + i.y * m.matrix[1][2] + i.z * m.matrix[2][2] + i.w * m.matrix[3][2],
-                     i.x * m.matrix[0][3] + i.y * m.matrix[1][3] + i.z * m.matrix[2][3] + i.w * m.matrix[3][3]);
+    return new Vec3d(i.x * (float)m.matrix[0][0] + i.y * (float)m.matrix[1][0] + i.z * (float)m.matrix[2][0] + i.w * (float)m.matrix[3][0],
+                     i.x * (float)m.matrix[0][1] + i.y * (float)m.matrix[1][1] + i.z * (float)m.matrix[2][1] + i.w * (float)m.matrix[3][1],
+                     i.x * (float)m.matrix[0][2] + i.y * (float)m.matrix[1][2] + i.z * (float)m.matrix[2][2] + i.w * (float)m.matrix[3][2],
+                     i.x * (float)m.matrix[0][3] + i.y * (float)m.matrix[1][3] + i.z * (float)m.matrix[2][3] + i.w * (float)m.matrix[3][3]);
   }
 
   private Vec3d addVector(Vec3d v1, Vec3d v2) {
@@ -229,24 +229,24 @@ public class Window extends JPanel implements ActionListener {
     return new Vec3d(v1.x - v2.x, v1.y - v2.y, v1.z - v2.z);
   }
 
-  private Vec3d multiplyVector(Vec3d v1, double k) {
+  private Vec3d multiplyVector(Vec3d v1, float k) {
     return new Vec3d(v1.x * k, v1.y * k, v1.z * k);
   }
 
-  private Vec3d divideVector(Vec3d v1, double k) {
+  private Vec3d divideVector(Vec3d v1, float k) {
     return new Vec3d(v1.x / k, v1.y / k, v1.z / k);
   }
 
-  private double vectorDotProduct(Vec3d v1, Vec3d v2) {
+  private float vectorDotProduct(Vec3d v1, Vec3d v2) {
     return v1.x * v2.x + v1.y * v2.y + v1.z * v2.z;
   }
 
-  private double vectorLength(Vec3d v) {
-    return Math.sqrt(vectorDotProduct(v, v));
+  private float vectorLength(Vec3d v) {
+    return (float)Math.sqrt(vectorDotProduct(v, v));
   }
 
   private Vec3d normalizeVector(Vec3d v) {
-    double l = vectorLength(v);
+    float l = vectorLength(v);
     return new Vec3d(v.x / l, v.y / l, v.z / l);
   }
 
@@ -260,44 +260,44 @@ public class Window extends JPanel implements ActionListener {
   }
 
   @SuppressWarnings("unused")
-  private Matrix rotationMatrixX(double angle) {
+  private Matrix rotationMatrixX(float angle) {
     Matrix matrix = new Matrix();
     matrix.matrix[0][0] = 1;
-    matrix.matrix[1][1] = Math.cos(angle);
-    matrix.matrix[1][2] = Math.sin(angle);
-    matrix.matrix[2][1] = -Math.sin(angle);
-    matrix.matrix[2][2] = Math.cos(angle);
+    matrix.matrix[1][1] = (float)Math.cos(angle);
+    matrix.matrix[1][2] = (float)Math.sin(angle);
+    matrix.matrix[2][1] = -(float)Math.sin(angle);
+    matrix.matrix[2][2] = (float)Math.cos(angle);
     matrix.matrix[3][3] = 1;
 
     return matrix;
   }
 
-  private Matrix rotationMatrixY(double angle) {
+  private Matrix rotationMatrixY(float angle) {
     Matrix matrix = new Matrix();
-    matrix.matrix[0][0] = Math.cos(angle);
-    matrix.matrix[0][2] = Math.sin(angle);
-    matrix.matrix[2][0] = -Math.sin(angle);
+    matrix.matrix[0][0] = (float)Math.cos(angle);
+    matrix.matrix[0][2] = (float)Math.sin(angle);
+    matrix.matrix[2][0] = -(float)Math.sin(angle);
     matrix.matrix[1][1] = 1;
-    matrix.matrix[2][2] = Math.cos(angle);
+    matrix.matrix[2][2] = (float)Math.cos(angle);
     matrix.matrix[3][3] = 1;
 
     return matrix;
   }
 
   @SuppressWarnings("unused")
-  private Matrix rotationMatrixZ(double angle) {
+  private Matrix rotationMatrixZ(float angle) {
     Matrix matrix = new Matrix();
-    matrix.matrix[0][0] = Math.cos(angle);
-    matrix.matrix[0][1] = Math.sin(angle);
-    matrix.matrix[1][0] = -Math.sin(angle);
-    matrix.matrix[1][1] = Math.cos(angle);
+    matrix.matrix[0][0] = (float)Math.cos(angle);
+    matrix.matrix[0][1] = (float)Math.sin(angle);
+    matrix.matrix[1][0] = -(float)Math.sin(angle);
+    matrix.matrix[1][1] = (float)Math.cos(angle);
     matrix.matrix[2][2] = 1;
     matrix.matrix[3][3] = 1;
 
     return matrix;
   }
 
-  private Matrix translationMatrix(double x, double y, double z) {
+  private Matrix translationMatrix(float x, float y, float z) {
     Matrix matrix = new Matrix();
     matrix.matrix[0][0] = 1;
     matrix.matrix[1][1] = 1;
@@ -310,9 +310,9 @@ public class Window extends JPanel implements ActionListener {
     return matrix;
   }
 
-  private Matrix projectionMatrix(double fov, double aspectRatio, double near, double far) {
-    double fovRadians = 1 / Math.tan(Math.toRadians(fov * 0.5));
-    Matrix matrix = new Matrix(new double[][] {
+  private Matrix projectionMatrix(float fov, float aspectRatio, float near, float far) {
+    float fovRadians = 1 / (float)Math.tan(Math.toRadians(fov * 0.5));
+    Matrix matrix = new Matrix(new float[][] {
       {aspectRatio * fovRadians, 0, 0, 0},
       {0, fovRadians, 0, 0},
       {0, 0, far / (far - near), 1},
@@ -332,7 +332,7 @@ public class Window extends JPanel implements ActionListener {
 
     Vec3d newRight = vectorCrossProduct(newUp, newForward);
 
-    Matrix matrix = new Matrix(new double[][] {
+    Matrix matrix = new Matrix(new float[][] {
       {newRight.x, newRight.y, newRight.z, 0},
       {newUp.x, newUp.y, newUp.z, 0},
       {newForward.x, newForward.y, newForward.z, 0},
@@ -366,32 +366,32 @@ public class Window extends JPanel implements ActionListener {
 
   private Vec3d vectorPlaneIntersect(Vec3d planeP, Vec3d planeN, Vec3d lineStart, Vec3d lineEnd) {
     planeN = normalizeVector(planeN);
-    double planeD = -vectorDotProduct(planeN, planeP);
-    double ad = vectorDotProduct(lineStart, planeN);
-    double bd = vectorDotProduct(lineEnd, planeN);
-    double t = (-planeD - ad) / (bd - ad);
+    float planeD = -vectorDotProduct(planeN, planeP);
+    float ad = vectorDotProduct(lineStart, planeN);
+    float bd = vectorDotProduct(lineEnd, planeN);
+    float t = (-planeD - ad) / (bd - ad);
     Vec3d lineStartToEnd = subtractVector(lineEnd, lineStart);
     Vec3d lineToIntersect = multiplyVector(lineStartToEnd, t);
 
     return addVector(lineStart, lineToIntersect);
   }
 
-  private int trianglePlaneClip(Vec3d planeP, Vec3d planeN, Triangle inTriangle, Triangle outTriangle1, Triangle outTriangle2) {
+  private byte trianglePlaneClip(Vec3d planeP, Vec3d planeN, Triangle inTriangle, Triangle outTriangle1, Triangle outTriangle2) {
     planeN = normalizeVector(planeN);
     Vec3d[] insidePoints = new Vec3d[3];
     insidePoints[0] = new Vec3d();
     insidePoints[1] = new Vec3d();
     insidePoints[2] = new Vec3d();
-    int insidePointCount = 0;
+    byte insidePointCount = 0;
     Vec3d[] outsidePoints = new Vec3d[3];
     outsidePoints[0] = new Vec3d();
     outsidePoints[1] = new Vec3d();
     outsidePoints[2] = new Vec3d();
-    int outsidePointCount = 0;
+    byte outsidePointCount = 0;
 
-    double d0 = planeN.x * inTriangle.point[0].x + planeN.y * inTriangle.point[0].y + planeN.z * inTriangle.point[0].z - vectorDotProduct(planeN, planeP);
-    double d1 = planeN.x * inTriangle.point[1].x + planeN.y * inTriangle.point[1].y + planeN.z * inTriangle.point[1].z - vectorDotProduct(planeN, planeP);
-    double d2 = planeN.x * inTriangle.point[2].x + planeN.y * inTriangle.point[2].y + planeN.z * inTriangle.point[2].z - vectorDotProduct(planeN, planeP);
+    float d0 = planeN.x * inTriangle.point[0].x + planeN.y * inTriangle.point[0].y + planeN.z * inTriangle.point[0].z - vectorDotProduct(planeN, planeP);
+    float d1 = planeN.x * inTriangle.point[1].x + planeN.y * inTriangle.point[1].y + planeN.z * inTriangle.point[1].z - vectorDotProduct(planeN, planeP);
+    float d2 = planeN.x * inTriangle.point[2].x + planeN.y * inTriangle.point[2].y + planeN.z * inTriangle.point[2].z - vectorDotProduct(planeN, planeP);
 
     if (d0 >= 0) {
       insidePoints[insidePointCount++].set(inTriangle.point[0]);
