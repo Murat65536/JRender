@@ -43,7 +43,7 @@ public class Window extends JPanel implements ActionListener {
     jLabel.setIcon(new ImageIcon(bufferedImage));
     this.add(jLabel);
     timer.start();
-    mesh.load("src/main/resources/cube.obj");
+    mesh.loadObject("src/main/resources/cube.obj");
     graphics = bufferedImage.createGraphics();
     graphics.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_SPEED);
     graphics.setRenderingHint(RenderingHints.KEY_COLOR_RENDERING, RenderingHints.VALUE_COLOR_RENDER_SPEED);
@@ -244,13 +244,7 @@ public class Window extends JPanel implements ActionListener {
   }
 
   private float vectorLength(Vec3d v) {
-    float number = vectorDotProduct(v, v);
-    float half = 0.5f * number;
-    int i = Float.floatToIntBits(number);
-    i = 0x5f3759df - (i >> 1);
-    number = Float.intBitsToFloat(i);
-    number *= (1.5f - half * number * number);
-    return number;
+    return 1 / (float)Math.sqrt(vectorDotProduct(v, v));
   }
 
   private Vec3d normalizeVector(Vec3d v) {

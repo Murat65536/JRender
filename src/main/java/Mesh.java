@@ -16,7 +16,7 @@ public class Mesh {
 
   public Mesh() {}
 
-  protected void load(String fileName) {
+  protected void loadObject(String fileName) {
     try {
       File file = new File(fileName);
       Scanner reader = new Scanner(file);
@@ -26,6 +26,9 @@ public class Mesh {
         String[] splitData = data.split(" ");
 
         if (data.length() > 0) {
+          // if (data.substring(0, 7).equals("mtllib ")) {
+
+          // }
           if (data.substring(0, 2).equals("v ")) {
             vertices.add(new Vec3d(Float.parseFloat(splitData[1]), Float.parseFloat(splitData[2]), Float.parseFloat(splitData[3])));
           }
@@ -44,6 +47,25 @@ public class Mesh {
           else if (data.substring(0, 3).equals("vn ")) {
             vertexNormals.add(new Vec3d(Float.parseFloat(splitData[1]), Float.parseFloat(splitData[2]), Float.parseFloat(splitData[3])));
           }
+        }
+      }
+      reader.close();
+    }
+    catch (FileNotFoundException exception) {
+      exception.printStackTrace();
+    }
+  }
+
+  private void loadTexture(String fileName) {
+    try {
+      File file = new File(fileName);
+      Scanner reader = new Scanner(file);
+      while (reader.hasNextLine()) {
+        String data = reader.nextLine();
+        String[] splitData = data.split(" ");
+
+        if (data.length() > 0) {
+
         }
       }
       reader.close();
