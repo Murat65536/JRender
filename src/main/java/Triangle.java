@@ -2,6 +2,7 @@ package src.main.java;
 
 public class Triangle {
   protected Vec3d[] point = new Vec3d[3];
+  protected int[] normalIndices = new int[3];
   protected short color = 0;
 
   public Triangle(float x1, float y1, float z1, float x2, float y2, float z2, float x3, float y3, float z3) {
@@ -28,6 +29,13 @@ public class Triangle {
     point[0] = point1.clone();
     point[1] = point2.clone();
     point[2] = point3.clone();
+  }
+
+  public Triangle(Vec3d point1, Vec3d point2, Vec3d point3, int[] normalIndices) {
+    point[0] = point1.clone();
+    point[1] = point2.clone();
+    point[2] = point3.clone();
+    this.normalIndices = normalIndices;
   }
 
   public Triangle() {

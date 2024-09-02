@@ -43,7 +43,7 @@ public class Window extends JPanel implements ActionListener {
     jLabel.setIcon(new ImageIcon(bufferedImage));
     this.add(jLabel);
     timer.start();
-    mesh.load("src/main/resources/test.obj");
+    mesh.load("src/main/resources/cube.obj");
     graphics = bufferedImage.createGraphics();
     graphics.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_SPEED);
     graphics.setRenderingHint(RenderingHints.KEY_COLOR_RENDERING, RenderingHints.VALUE_COLOR_RENDER_SPEED);
@@ -159,7 +159,7 @@ public class Window extends JPanel implements ActionListener {
       clipped[1] = new Triangle();
       ArrayList<Triangle> triangleList = new ArrayList<Triangle>();
       triangleList.add(rasterizedTriangles);
-      int newTriangles = 1;
+      byte newTriangles = 1;
       for (byte p = 0; p < 4; p++) {
         byte trianglesToAdd = 0;
         while (newTriangles > 0) {
@@ -182,11 +182,11 @@ public class Window extends JPanel implements ActionListener {
               break;
           }
 
-          for (int w = 0; w < trianglesToAdd; w++) {
+          for (byte w = 0; w < trianglesToAdd; w++) {
             triangleList.add(clipped[w].clone());
           }
         }
-        newTriangles = triangleList.size();
+        newTriangles = (byte)triangleList.size();
       }
 
       for (Triangle triangle : triangleList) {
