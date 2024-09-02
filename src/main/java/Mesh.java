@@ -1,7 +1,9 @@
 package src.main.java;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.util.Scanner;
@@ -9,6 +11,10 @@ import java.util.Scanner;
 public class Mesh {
   protected ArrayList<Triangle> triangles = new ArrayList<Triangle>();
   protected ArrayList<Vec3d> vertexNormals = new ArrayList<Vec3d>();
+  private final String PATH = "src/main/resources/";
+  protected Map<String, Map<String, String[]>> textures = new HashMap<String, Map<String, String[]>>();
+  private Map<String, String[]> attributes = new HashMap<String, String[]>();
+  private String currentTexture = null;
 
   public Mesh(List<Triangle> triangles) {
     this.triangles.addAll(triangles);
@@ -18,35 +24,35 @@ public class Mesh {
 
   protected void loadObject(String fileName) {
     try {
-      File file = new File(fileName);
+      File file = new File(PATH + fileName);
       Scanner reader = new Scanner(file);
       ArrayList<Vec3d> vertices = new ArrayList<Vec3d>();
       while (reader.hasNextLine()) {
         String data = reader.nextLine();
         String[] splitData = data.split(" ");
-
-        if (data.length() > 0) {
-          // if (data.substring(0, 7).equals("mtllib ")) {
-
-          // }
-          if (data.substring(0, 2).equals("v ")) {
-            vertices.add(new Vec3d(Float.parseFloat(splitData[1]), Float.parseFloat(splitData[2]), Float.parseFloat(splitData[3])));
-          }
-          else if (data.substring(0, 2).equals("f ")) {
-            triangles.add(new Triangle(
-              vertices.get(Integer.parseInt(splitData[1].split("/")[0]) - 1),
-              vertices.get(Integer.parseInt(splitData[2].split("/")[0]) - 1),
-              vertices.get(Integer.parseInt(splitData[3].split("/")[0]) - 1),
-              new int[] {
-                Integer.parseInt(splitData[1].split("/")[2]) - 1,
-                Integer.parseInt(splitData[2].split("/")[2]) - 1,
-                Integer.parseInt(splitData[3].split("/")[2]) - 1
-              }
-            ));
-          }
-          else if (data.substring(0, 3).equals("vn ")) {
-            vertexNormals.add(new Vec3d(Float.parseFloat(splitData[1]), Float.parseFloat(splitData[2]), Float.parseFloat(splitData[3])));
-          }
+        if (data.startsWith("mtllib ")) {
+          loadTexture(splitData[1]);
+        }
+        if (data.startsWith("v ")) {
+          vertices.add(new Vec3d(Float.parseFloat(splitData[1]), Float.parseFloat(splitData[2]), Float.parseFloat(splitData[3])));
+        }
+        else if (data.startsWith("f ")) {
+          triangles.add(new Triangle(
+            vertices.get(Integer.parseInt(splitData[1].split("/")[0]) - 1),
+            vertices.get(Integer.parseInt(splitData[2].split("/")[0]) - 1),
+            vertices.get(Integer.parseInt(splitData[3].split("/")[0]) - 1),
+            new int[] {
+              Integer.parseInt(splitData[1].split("/")[2]) - 1,
+              Integer.parseInt(splitData[2].split("/")[2]) - 1,
+              Integer.parseInt(splitData[3].split("/")[2]) - 1
+            }
+          ));
+        }
+        else if (data.startsWith("vn ")) {
+          vertexNormals.add(new Vec3d(Float.parseFloat(splitData[1]), Float.parseFloat(splitData[2]), Float.parseFloat(splitData[3])));
+        }
+        else if (data.startsWith("usemtl ")) {
+          currentTexture = splitData[1];
         }
       }
       reader.close();
@@ -58,14 +64,34 @@ public class Mesh {
 
   private void loadTexture(String fileName) {
     try {
-      File file = new File(fileName);
+      File file = new File(PATH + fileName);
       Scanner reader = new Scanner(file);
+
       while (reader.hasNextLine()) {
         String data = reader.nextLine();
         String[] splitData = data.split(" ");
 
-        if (data.length() > 0) {
-
+        if (data.startsWith("newmtl ")) {
+          attributes.clear();
+          textures.put(splitData[1], attributes);
+        }
+        else if (data.startsWith("Ka ")) {
+          attributes.put("Ambient Color", new String[] {splitData[1], splitData[2], splitData[3]});
+        }
+        else if (data.startsWith("Kd ")) {
+          attributes.put("Diffuse Color", new String[] {splitData[1], splitData[2], splitData[3]});
+        }
+        else if (data.startsWith("Ks ")) {
+          attributes.put("Specular Color", new String[] {splitData[1], splitData[2], splitData[3]});
+        }
+        else if (data.startsWith("Ns ")) {
+          attributes.put("Shininess", new String[] {splitData[1]});
+        }
+        else if (data.startsWith("d ")) {
+          attributes.put("Dissolve", new String[] {splitData[1]});
+        }
+        else if (data.startsWith("map_Kd ")) {
+          attributes.put("Diffuse Texture Map", new String[] {splitData[1]});
         }
       }
       reader.close();

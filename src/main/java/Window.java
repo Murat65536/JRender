@@ -43,7 +43,7 @@ public class Window extends JPanel implements ActionListener {
     jLabel.setIcon(new ImageIcon(bufferedImage));
     this.add(jLabel);
     timer.start();
-    mesh.loadObject("src/main/resources/cube.obj");
+    mesh.loadObject("cube.obj");
     graphics = bufferedImage.createGraphics();
     graphics.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_SPEED);
     graphics.setRenderingHint(RenderingHints.KEY_COLOR_RENDERING, RenderingHints.VALUE_COLOR_RENDER_SPEED);
