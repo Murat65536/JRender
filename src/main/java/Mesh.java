@@ -9,11 +9,13 @@ import java.io.FileNotFoundException;
 import java.util.Scanner;
 
 public class Mesh {
-  protected ArrayList<Triangle> triangles = new ArrayList<Triangle>();
-  protected ArrayList<Vec3d> vertexNormals = new ArrayList<Vec3d>();
+  public ArrayList<Triangle> triangles = new ArrayList<>();
+  public ArrayList<Vec3d> vertexNormals = new ArrayList<>();
+  public ArrayList<Vec2d> textureCoords = new ArrayList<>();
   private final String PATH = "src/main/resources/";
-  protected Map<String, Map<String, String[]>> textures = new HashMap<String, Map<String, String[]>>();
-  private Map<String, String[]> attributes = new HashMap<String, String[]>();
+  public Map<String, Map<String, String[]>> textures = new HashMap<>();
+  private Map<String, String[]> attributes = new HashMap<>();
+  @SuppressWarnings("unused")
   private String currentTexture = null;
 
   public Mesh(List<Triangle> triangles) {
@@ -22,11 +24,11 @@ public class Mesh {
 
   public Mesh() {}
 
-  protected void loadObject(String fileName) {
+  public void loadObject(String fileName, boolean hasTexture) {
     try {
       File file = new File(PATH + fileName);
       Scanner reader = new Scanner(file);
-      ArrayList<Vec3d> vertices = new ArrayList<Vec3d>();
+      ArrayList<Vec3d> vertices = new ArrayList<>();
       while (reader.hasNextLine()) {
         String data = reader.nextLine();
         String[] splitData = data.split(" ");
@@ -37,19 +39,39 @@ public class Mesh {
           vertices.add(new Vec3d(Float.parseFloat(splitData[1]), Float.parseFloat(splitData[2]), Float.parseFloat(splitData[3])));
         }
         else if (data.startsWith("f ")) {
-          triangles.add(new Triangle(
-            vertices.get(Integer.parseInt(splitData[1].split("/")[0]) - 1),
-            vertices.get(Integer.parseInt(splitData[2].split("/")[0]) - 1),
-            vertices.get(Integer.parseInt(splitData[3].split("/")[0]) - 1),
-            new int[] {
-              Integer.parseInt(splitData[1].split("/")[2]) - 1,
-              Integer.parseInt(splitData[2].split("/")[2]) - 1,
-              Integer.parseInt(splitData[3].split("/")[2]) - 1
-            }
-          ));
+          if (hasTexture) {
+            triangles.add(new Triangle(
+              vertices.get(Integer.parseInt(splitData[1].split("/")[0]) - 1),
+              vertices.get(Integer.parseInt(splitData[2].split("/")[0]) - 1),
+              vertices.get(Integer.parseInt(splitData[3].split("/")[0]) - 1),
+              textureCoords.get(Integer.parseInt(splitData[1].split("/")[1]) - 1),
+              textureCoords.get(Integer.parseInt(splitData[2].split("/")[1]) - 1),
+              textureCoords.get(Integer.parseInt(splitData[3].split("/")[1]) - 1),
+              new int[] {
+                Integer.parseInt(splitData[1].split("/")[2]) - 1,
+                Integer.parseInt(splitData[2].split("/")[2]) - 1,
+                Integer.parseInt(splitData[3].split("/")[2]) - 1
+              }
+            ));
+          }
+          else {
+            triangles.add(new Triangle(
+              vertices.get(Integer.parseInt(splitData[1].split("/")[0]) - 1),
+              vertices.get(Integer.parseInt(splitData[2].split("/")[0]) - 1),
+              vertices.get(Integer.parseInt(splitData[3].split("/")[0]) - 1),
+              new int[] {
+                Integer.parseInt(splitData[1].split("/")[2]) - 1,
+                Integer.parseInt(splitData[2].split("/")[2]) - 1,
+                Integer.parseInt(splitData[3].split("/")[2]) - 1
+              }
+            ));
+          }
         }
         else if (data.startsWith("vn ")) {
           vertexNormals.add(new Vec3d(Float.parseFloat(splitData[1]), Float.parseFloat(splitData[2]), Float.parseFloat(splitData[3])));
+        }
+        else if (data.startsWith("vt")) {
+          textureCoords.add(new Vec2d(Float.parseFloat(splitData[1]), Float.parseFloat(splitData[2])));
         }
         else if (data.startsWith("usemtl ")) {
           currentTexture = splitData[1];

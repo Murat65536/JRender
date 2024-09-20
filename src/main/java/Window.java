@@ -1,492 +1,390 @@
 package src.main.java;
 
 import java.awt.Color;
-import java.awt.Dimension;
 import java.awt.Graphics2D;
 import java.awt.GridLayout;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.awt.event.KeyEvent;
 import java.awt.image.BufferedImage;
-import java.awt.RenderingHints;
 import java.util.ArrayList;
-import java.util.Collections;
 import javax.swing.Timer;
 import javax.swing.ImageIcon;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 
 public class Window extends JPanel implements ActionListener {
-  private final short WIDTH = 512;
-  private final short HEIGHT = 512;
-  private final float MOUSE_SENSITIVITY = 2;
-  private final float MOVEMENT_SPEED = 20;
-  private final float FOV = 90;
-  private final BufferedImage bufferedImage;
+  private BufferedImage bufferedImage;
   private final JLabel jLabel = new JLabel();
   private final Timer timer = new Timer(0, this);
   private static final Mesh mesh = new Mesh();
-  private final Matrix projectionMatrix = projectionMatrix(FOV, (float)HEIGHT / WIDTH, 0.1f, 1000);
-  private Vec3d camera = new Vec3d();
-  private Vec3d lookDirection = new Vec3d();
-  private Vec3d sideDirection = new Vec3d();
-  private float pitch = 0;
-  private float yaw = 0;
+  public static Vec3d camera = new Vec3d();
+  public static Vec3d lookDirection = new Vec3d();
+  public static Vec3d strafeDirection = new Vec3d();
+  public static float pitch = 0;
+  public static float yaw = 0;
   private FPS fps = new FPS();
   private Graphics2D graphics;
+  private Sprite sprite = new Sprite("src/main/resources/test_texture.jpg");
+  private float[][] depthBuffer = new float[Main.height][Main.width];
 
   public Window() {
     super(true);
+    resizeBufferedImage();
     this.setLayout(new GridLayout());
-    this.setPreferredSize(new Dimension(WIDTH, HEIGHT));
-    bufferedImage = new BufferedImage(WIDTH, HEIGHT, BufferedImage.TYPE_INT_ARGB);
-    jLabel.setIcon(new ImageIcon(bufferedImage));
-    this.add(jLabel);
     timer.start();
-    mesh.loadObject("cube.obj");
-    graphics = bufferedImage.createGraphics();
-    graphics.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_SPEED);
-    graphics.setRenderingHint(RenderingHints.KEY_COLOR_RENDERING, RenderingHints.VALUE_COLOR_RENDER_SPEED);
+    mesh.loadObject("cube.obj", true);
   }
 
   @Override
   public void actionPerformed(ActionEvent event) {
-    System.out.println(fps.getFPS());
-    getKeys();
-    getMouse();
-    graphics.setColor(Color.BLACK);
-    graphics.fillRect(0, 0, WIDTH, HEIGHT);
-    Matrix worldMatrix = translationMatrix(0, 0, 5);
+    resizeBufferedImage();
+    graphics = bufferedImage.createGraphics();
+    Matrix projection = Matrix.projection(Main.FOV, (float)Main.height / Main.width, 0.1f, 1000);
+    Keys.getKeys(fps);
+    pitch = Mouse.getPitch();
+    yaw = Mouse.getYaw();
+    Matrix worldMatrix = Matrix.translation(0, 0, 5);
     Vec3d up = new Vec3d(0, 1, 0);
     Vec3d target = new Vec3d(0, 0, 1);
-    Vec3d side = new Vec3d(-1, 0, 0);
-    Matrix rotationX = rotationMatrixX(pitch);
-    Matrix rotationY = rotationMatrixY(yaw);
-    lookDirection = multiplyMatrixVector(matrixMultiplyMatrix(rotationX, rotationY), target);
-    sideDirection = multiplyMatrixVector(matrixMultiplyMatrix(rotationX, rotationY), side);
-    target = addVector(camera, lookDirection);
-    Matrix cameraMatrix = matrixPoint(camera, target, up);
-    Matrix viewMatrix = quickInverseMatrix(cameraMatrix);
-    ArrayList<Triangle> trianglesToRaster = new ArrayList<Triangle>();
+    Vec3d strafe = new Vec3d(-1, 0, 0);
+    Matrix rotationX = Matrix.rotationX(pitch);
+    Matrix rotationY = Matrix.rotationY(yaw);
+    Matrix cameraRotation = Matrix.multiply(rotationX, rotationY);
+    lookDirection = Vec3d.multiplyMatrix(cameraRotation, target);
+    strafeDirection = Vec3d.multiplyMatrix(cameraRotation, strafe);
+    target = Vec3d.add(camera, lookDirection);
+    Matrix cameraMatrix = Matrix.pointAt(camera, target, up);
 
-    for (int i = 0; i < mesh.triangles.size(); i++) {
+    Matrix viewMatrix = Matrix.inverse(cameraMatrix);
+    
+    ArrayList<Triangle> trianglesToRaster = new ArrayList<>();
+
+    for (Triangle triangle : mesh.triangles) {
       Triangle projectedTriangle = new Triangle();
       Triangle transformedTriangle = new Triangle();
       Triangle triangleViewed = new Triangle();
       
-      transformedTriangle.point[0] = multiplyMatrixVector(worldMatrix, mesh.triangles.get(i).point[0]);
-      transformedTriangle.point[1] = multiplyMatrixVector(worldMatrix, mesh.triangles.get(i).point[1]);
-      transformedTriangle.point[2] = multiplyMatrixVector(worldMatrix, mesh.triangles.get(i).point[2]);
+      transformedTriangle.point[0].set(Vec3d.multiplyMatrix(worldMatrix, triangle.point[0]));
+      transformedTriangle.point[1].set(Vec3d.multiplyMatrix(worldMatrix, triangle.point[1]));
+      transformedTriangle.point[2].set(Vec3d.multiplyMatrix(worldMatrix, triangle.point[2]));
+      transformedTriangle.texture[0].set(triangle.texture[0]);
+      transformedTriangle.texture[1].set(triangle.texture[1]);
+      transformedTriangle.texture[2].set(triangle.texture[2]);
 
-      Vec3d normal = new Vec3d();
-      Vec3d line1 = new Vec3d();
-      Vec3d line2 = new Vec3d();
+      Vec3d line1 = Vec3d.subtract(transformedTriangle.point[1], transformedTriangle.point[0]);
+      Vec3d line2 = Vec3d.subtract(transformedTriangle.point[2], transformedTriangle.point[0]);
+      Vec3d normal = Vec3d.normalize(Vec3d.crossProduct(line1, line2));
+      Vec3d cameraRay = Vec3d.subtract(transformedTriangle.point[0], camera);
 
-      line1 = subtractVector(transformedTriangle.point[1], transformedTriangle.point[0]);
-      line2 = subtractVector(transformedTriangle.point[2], transformedTriangle.point[0]);
+      if (Vec3d.dotProduct(normal, cameraRay) < 0) {
 
-      normal = vectorCrossProduct(line1, line2);
-      normal = normalizeVector(normal);
+        Vec3d lightDirection = new Vec3d(0, 1, -1);
+        lightDirection = Vec3d.normalize(lightDirection);
+        transformedTriangle.color = (short)(Math.max(0.1f, Vec3d.dotProduct(lightDirection, normal)) * 255);
 
-      Vec3d cameraRay = subtractVector(transformedTriangle.point[0], camera);
-
-      if (vectorDotProduct(normal, cameraRay) < 0) {
-
-        Vec3d lightDirection = new Vec3d(0, 0, -1);
-        lightDirection = normalizeVector(lightDirection);
-        float dotProduct = Math.max(0.1f, vectorDotProduct(lightDirection, normal));
-        transformedTriangle.color = (short)(dotProduct * 255);
-
-        triangleViewed.point[0] = multiplyMatrixVector(viewMatrix, transformedTriangle.point[0]);
-        triangleViewed.point[1] = multiplyMatrixVector(viewMatrix, transformedTriangle.point[1]);
-        triangleViewed.point[2] = multiplyMatrixVector(viewMatrix, transformedTriangle.point[2]);
+        triangleViewed.point[0].set(Vec3d.multiplyMatrix(viewMatrix, transformedTriangle.point[0]));
+        triangleViewed.point[1].set(Vec3d.multiplyMatrix(viewMatrix, transformedTriangle.point[1]));
+        triangleViewed.point[2].set(Vec3d.multiplyMatrix(viewMatrix, transformedTriangle.point[2]));
         triangleViewed.color = transformedTriangle.color;
+        triangleViewed.texture[0].set(transformedTriangle.texture[0]);
+        triangleViewed.texture[1].set(transformedTriangle.texture[1]);
+        triangleViewed.texture[2].set(transformedTriangle.texture[2]);
         
-        byte clippedTriangles = 0;
-        Triangle[] clipped = new Triangle[2];
-        clipped[0] = new Triangle();
-        clipped[1] = new Triangle();
-        clippedTriangles = trianglePlaneClip(new Vec3d(0, 0, 0.1f), new Vec3d(0, 0, 1), triangleViewed, clipped[0], clipped[1]);
+        Triangle[] clipped = new Triangle[] {new Triangle(), new Triangle()};
+        byte clippedTriangles = Triangle.clipPlane(new Vec3d(0, 0, 0.1f), new Vec3d(0, 0, 1), triangleViewed, clipped[0], clipped[1]);
         for (byte j = 0; j < clippedTriangles; j++) {
-          projectedTriangle.point[0] = multiplyMatrixVector(projectionMatrix, clipped[j].point[0]);
-          projectedTriangle.point[1] = multiplyMatrixVector(projectionMatrix, clipped[j].point[1]);
-          projectedTriangle.point[2] = multiplyMatrixVector(projectionMatrix, clipped[j].point[2]);
+          projectedTriangle.point[0].set(Vec3d.multiplyMatrix(projection, clipped[j].point[0]));
+          projectedTriangle.point[1].set(Vec3d.multiplyMatrix(projection, clipped[j].point[1]));
+          projectedTriangle.point[2].set(Vec3d.multiplyMatrix(projection, clipped[j].point[2]));
           projectedTriangle.color = clipped[j].color;
+          projectedTriangle.texture[0].set(clipped[j].texture[0]);
+          projectedTriangle.texture[1].set(clipped[j].texture[1]);
+          projectedTriangle.texture[2].set(clipped[j].texture[2]);
 
-          projectedTriangle.point[0] = divideVector(projectedTriangle.point[0], projectedTriangle.point[0].w);
-          projectedTriangle.point[1] = divideVector(projectedTriangle.point[1], projectedTriangle.point[1].w);
-          projectedTriangle.point[2] = divideVector(projectedTriangle.point[2], projectedTriangle.point[2].w);
+          projectedTriangle.texture[0].setU(projectedTriangle.texture[0].getU() / projectedTriangle.point[0].getW());
+          projectedTriangle.texture[1].setU(projectedTriangle.texture[1].getU() / projectedTriangle.point[1].getW());
+          projectedTriangle.texture[2].setU(projectedTriangle.texture[2].getU() / projectedTriangle.point[2].getW());
+
+          projectedTriangle.texture[0].setV(projectedTriangle.texture[0].getV() / projectedTriangle.point[0].getW());
+          projectedTriangle.texture[1].setV(projectedTriangle.texture[1].getV() / projectedTriangle.point[1].getW());
+          projectedTriangle.texture[2].setV(projectedTriangle.texture[2].getV() / projectedTriangle.point[2].getW());
+
+          projectedTriangle.texture[0].setW(1f / projectedTriangle.point[0].getW());
+          projectedTriangle.texture[1].setW(1f / projectedTriangle.point[1].getW());
+          projectedTriangle.texture[2].setW(1f / projectedTriangle.point[2].getW());
+
+          projectedTriangle.point[0].set(Vec3d.divide(projectedTriangle.point[0], projectedTriangle.point[0].getW()));
+          projectedTriangle.point[1].set(Vec3d.divide(projectedTriangle.point[1], projectedTriangle.point[1].getW()));
+          projectedTriangle.point[2].set(Vec3d.divide(projectedTriangle.point[2], projectedTriangle.point[2].getW()));
         
-          projectedTriangle.point[0].x *= -1;
-          projectedTriangle.point[1].x *= -1;
-          projectedTriangle.point[2].x *= -1;
-          projectedTriangle.point[0].y *= -1;
-          projectedTriangle.point[1].y *= -1;
-          projectedTriangle.point[2].y *= -1;
+          projectedTriangle.point[0].setX(projectedTriangle.point[0].getX() * -1);
+          projectedTriangle.point[1].setX(projectedTriangle.point[1].getX() * -1);
+          projectedTriangle.point[2].setX(projectedTriangle.point[2].getX() * -1);
+          projectedTriangle.point[0].setY(projectedTriangle.point[0].getY() * -1);
+          projectedTriangle.point[1].setY(projectedTriangle.point[1].getY() * -1);
+          projectedTriangle.point[2].setY(projectedTriangle.point[2].getY() * -1);
 
           Vec3d offsetView = new Vec3d(1, 1, 0);
-          projectedTriangle.point[0] = addVector(projectedTriangle.point[0], offsetView);
-          projectedTriangle.point[1] = addVector(projectedTriangle.point[1], offsetView);
-          projectedTriangle.point[2] = addVector(projectedTriangle.point[2], offsetView);
+          projectedTriangle.point[0].set(Vec3d.add(projectedTriangle.point[0], offsetView));
+          projectedTriangle.point[1].set(Vec3d.add(projectedTriangle.point[1], offsetView));
+          projectedTriangle.point[2].set(Vec3d.add(projectedTriangle.point[2], offsetView));
 
-          projectedTriangle.point[0].x *= 0.5 * WIDTH;
-          projectedTriangle.point[0].y *= 0.5 * HEIGHT;
-          projectedTriangle.point[1].x *= 0.5 * WIDTH;
-          projectedTriangle.point[1].y *= 0.5 * HEIGHT;
-          projectedTriangle.point[2].x *= 0.5 * WIDTH;
-          projectedTriangle.point[2].y *= 0.5 * HEIGHT;
+          projectedTriangle.point[0].setX(projectedTriangle.point[0].getX() * 0.5f * Main.width);
+          projectedTriangle.point[0].setY(projectedTriangle.point[0].getY() * 0.5f * Main.height);
+          projectedTriangle.point[1].setX(projectedTriangle.point[1].getX() * 0.5f * Main.width);
+          projectedTriangle.point[1].setY(projectedTriangle.point[1].getY() * 0.5f * Main.height);
+          projectedTriangle.point[2].setX(projectedTriangle.point[2].getX() * 0.5f * Main.width);
+          projectedTriangle.point[2].setY(projectedTriangle.point[2].getY() * 0.5f * Main.height);
           trianglesToRaster.add(projectedTriangle.clone());
         }
       }
     }
 
-    Collections.sort(trianglesToRaster, (t1, t2) -> {
-      float z1 = t1.point[0].z + t1.point[1].z + t1.point[2].z;
-      float z2 = t2.point[0].z + t2.point[1].z + t2.point[2].z;
+    // Not needed until transparent or translucent material is added.
 
-      if (z1 > z2) {
-        return -1;
-      }
-      else if (z1 < z2) {
-        return 1;
-      }
-      return 0;
-    });
+    // Collections.sort(trianglesToRaster, (t1, t2) -> {
+    //   float z1 = t1.point[0].getZ() + t1.point[1].getZ() + t1.point[2].getZ();
+    //   float z2 = t2.point[0].getZ() + t2.point[1].getZ() + t2.point[2].getZ();
+
+    //   if (z1 > z2) {
+    //     return -1;
+    //   }
+    //   else if (z1 < z2) {
+    //     return 1;
+    //   }
+    //   return 0;
+    // });
+
+    graphics.setColor(Color.BLACK);
+    graphics.fillRect(0, 0, Main.width, Main.height);
+
+    depthBuffer = new float[Main.height][Main.width];
 
     for (Triangle rasterizedTriangles : trianglesToRaster) {
-      Triangle[] clipped = new Triangle[2];
-      clipped[0] = new Triangle();
-      clipped[1] = new Triangle();
-      ArrayList<Triangle> triangleList = new ArrayList<Triangle>();
+      Triangle[] clipped = new Triangle[] {new Triangle(), new Triangle()};
+      ArrayList<Triangle> triangleList = new ArrayList<>();
       triangleList.add(rasterizedTriangles);
-      byte newTriangles = 1;
-      for (byte p = 0; p < 4; p++) {
-        byte trianglesToAdd = 0;
+      int newTriangles = 1;
+      for (byte side = 0; side < 4; side++) {
+        int trianglesToAdd = 0;
         while (newTriangles > 0) {
           Triangle test = triangleList.get(0);
           triangleList.remove(0);
           newTriangles--;
-
-          switch (p) {
+          switch (side) {
             case 0:
-              trianglesToAdd = trianglePlaneClip(new Vec3d(0, 0, 0), new Vec3d(0, 1, 0), test, clipped[0], clipped[1]);
+              trianglesToAdd = Triangle.clipPlane(new Vec3d(0, 0, 0), new Vec3d(0, 1, 0), test, clipped[0], clipped[1]);
               break;
             case 1:
-              trianglesToAdd = trianglePlaneClip(new Vec3d(0, HEIGHT - 1, 0), new Vec3d(0, -1, 0), test, clipped[0], clipped[1]);
+              trianglesToAdd = Triangle.clipPlane(new Vec3d(0, Main.height - 1, 0), new Vec3d(0, -1, 0), test, clipped[0], clipped[1]);
               break;
             case 2:
-              trianglesToAdd = trianglePlaneClip(new Vec3d(0, 0, 0), new Vec3d(1, 0, 0), test, clipped[0], clipped[1]);
+              trianglesToAdd = Triangle.clipPlane(new Vec3d(0, 0, 0), new Vec3d(1, 0, 0), test, clipped[0], clipped[1]);
               break;
             case 3:
-              trianglesToAdd = trianglePlaneClip(new Vec3d(WIDTH - 1, 0, 0), new Vec3d(-1, 0, 0), test, clipped[0], clipped[1]);
+              trianglesToAdd = Triangle.clipPlane(new Vec3d(Main.width - 1, 0, 0), new Vec3d(-1, 0, 0), test, clipped[0], clipped[1]);
               break;
           }
-
           for (byte w = 0; w < trianglesToAdd; w++) {
             triangleList.add(clipped[w].clone());
           }
         }
-        newTriangles = (byte)triangleList.size();
+        newTriangles = triangleList.size();
       }
 
       for (Triangle triangle : triangleList) {
-        graphics.setColor(new Color(triangle.color, triangle.color, triangle.color));
-        graphics.fillPolygon(new int[] {
-          (short)triangle.point[0].x,
-          (short)triangle.point[1].x,
-          (short)triangle.point[2].x
-        }, new int[] {
-          (short)triangle.point[0].y,
-          (short)triangle.point[1].y,
-          (short)triangle.point[2].y
-        }, 3);
-        // graphics.setColor(Color.RED);
-        // graphics.drawPolygon(new int[] {
-        //   (short)triangle.point[0].x,
-        //   (short)triangle.point[1].x,
-        //   (short)triangle.point[2].x
+        textureTriangle(
+          Math.round(triangle.point[0].getX()), Math.round(triangle.point[0].getY()), triangle.texture[0].getU(), triangle.texture[0].getV(), triangle.texture[0].getW(),
+          Math.round(triangle.point[1].getX()), Math.round(triangle.point[1].getY()), triangle.texture[1].getU(), triangle.texture[1].getV(), triangle.texture[1].getW(),
+          Math.round(triangle.point[2].getX()), Math.round(triangle.point[2].getY()), triangle.texture[2].getU(), triangle.texture[2].getV(), triangle.texture[2].getW(),
+          sprite
+        );
+        // graphics.setColor(new Color(triangle.color, triangle.color, triangle.color));
+        // graphics.fillPolygon(new int[] {
+        //   (short)triangle.point[0].getX(),
+        //   (short)triangle.point[1].getX(),
+        //   (short)triangle.point[2].getX()
         // }, new int[] {
-        //   (short)triangle.point[0].y,
-        //   (short)triangle.point[1].y,
-        //   (short)triangle.point[2].y
+        //   (short)triangle.point[0].getY(),
+        //   (short)triangle.point[1].getY(),
+        //   (short)triangle.point[2].getY()
+        // }, 3);
+        // graphics.setColor(Color.WHITE);
+        // graphics.drawPolygon(new int[] {
+        //   (int)triangle.point[0].getX(),
+        //   (int)triangle.point[1].getX(),
+        //   (int)triangle.point[2].getX()
+        // }, new int[] {
+        //   (int)triangle.point[0].getY(),
+        //   (int)triangle.point[1].getY(),
+        //   (int)triangle.point[2].getY()
         // }, 3);
       }
     }
+    graphics.drawString(Float.toString(fps.getFPS()), 100, 100);
     jLabel.repaint();
     fps.update();
   }
 
-  private Vec3d multiplyMatrixVector(Matrix m, Vec3d i) {
-    return new Vec3d(i.x * (float)m.matrix[0][0] + i.y * (float)m.matrix[1][0] + i.z * (float)m.matrix[2][0] + i.w * (float)m.matrix[3][0],
-                     i.x * (float)m.matrix[0][1] + i.y * (float)m.matrix[1][1] + i.z * (float)m.matrix[2][1] + i.w * (float)m.matrix[3][1],
-                     i.x * (float)m.matrix[0][2] + i.y * (float)m.matrix[1][2] + i.z * (float)m.matrix[2][2] + i.w * (float)m.matrix[3][2],
-                     i.x * (float)m.matrix[0][3] + i.y * (float)m.matrix[1][3] + i.z * (float)m.matrix[2][3] + i.w * (float)m.matrix[3][3]);
+  private void resizeBufferedImage() {
+    bufferedImage = new BufferedImage(Main.width, Main.height, BufferedImage.TYPE_INT_ARGB);
+    jLabel.setIcon(new ImageIcon(bufferedImage));
+    this.add(jLabel);
   }
 
-  private Vec3d addVector(Vec3d v1, Vec3d v2) {
-    return new Vec3d(v1.x + v2.x, v1.y + v2.y, v1.z + v2.z);
-  }
+  private void textureTriangle(int x1, int y1, float u1, float v1, float w1,
+                                int x2, int y2, float u2, float v2, float w2,
+                                int x3, int y3, float u3, float v3, float w3, Sprite sprite) {
+    if (y2 < y1) {
+      y1 += (y2 - (y2 = y1));
+      x1 += (x2 - (x2 = x1));
+      u1 += (u2 - (u2 = u1));
+      v1 += (v2 - (v2 = v1));
+      w1 += (w2 - (w2 = w1));
+    }
+    if (y3 < y1) {
+      y1 += (y3 - (y3 = y1));
+      x1 += (x3 - (x3 = x1));
+      u1 += (u3 - (u3 = u1));
+      v1 += (v3 - (v3 = v1));
+      w1 += (w3 - (w3 = w1));
+    }
+    if (y3 < y2) {
+      y2 += (y3 - (y3 = y2));
+      x2 += (x3 - (x3 = x2));
+      u2 += (u3 - (u3 = u2));
+      v2 += (v3 - (v3 = v2));
+      w2 += (w3 - (w3 = w2));
+    }
+    int dx1 = x2 - x1;
+    int dy1 = y2 - y1;
+    float du1 = u2 - u1;
+    float dv1 = v2 - v1;
+    float dw1 = w2 - w1;
 
-  private Vec3d subtractVector(Vec3d v1, Vec3d v2) {
-    return new Vec3d(v1.x - v2.x, v1.y - v2.y, v1.z - v2.z);
-  }
+    int dx2 = x3 - x1;
+    int dy2 = y3 - y1;
+    float du2 = u3 - u1;
+    float dv2 = v3 - v1;
+    float dw2 = w3 - w1;
+  
+    float textureU;
+    float textureV;
+    float textureW;
+  
+    float daxStep = 0;
+    float dbxStep = 0;
 
-  private Vec3d multiplyVector(Vec3d v1, float k) {
-    return new Vec3d(v1.x * k, v1.y * k, v1.z * k);
-  }
+    float du1Step = 0;
+    float dv1Step = 0;
+    float dw1Step = 0;
 
-  private Vec3d divideVector(Vec3d v1, float k) {
-    return new Vec3d(v1.x / k, v1.y / k, v1.z / k);
-  }
+    float du2Step = 0;
+    float dv2Step = 0;
+    float dw2Step = 0;
+  
+    if (dy1 != 0) {
+      daxStep = dx1 / (float)Math.abs(dy1);
+      du1Step = du1 / (float)Math.abs(dy1);
+      dv1Step = dv1 / (float)Math.abs(dy1);
+      dw1Step = dw1 / (float)Math.abs(dy1);
+    }
+    if (dy2 != 0) {
+      dbxStep = dx2 / (float)Math.abs(dy2);
+      du2Step = du2 / (float)Math.abs(dy2);
+      dv2Step = dv2 / (float)Math.abs(dy2);
+      dw2Step = dw2 / (float)Math.abs(dy2);
+    }
+  
+    if (dy1 != 0) {
+      for (int y = y1; y <= y2; y++) {
+        int ax = Math.round(x1 + (float)(y - y1) * daxStep);
+        int bx = Math.round(x1 + (float)(y - y1) * dbxStep);
+  
+        float textureSU = u1 + (float)(y - y1) * du1Step;
+        float textureSV = v1 + (float)(y - y1) * dv1Step;
+        float textureSW = w1 + (float)(y - y1) * dw1Step;
+        
+        float textureEU = u1 + (float)(y - y1) * du2Step;
+        float textureEV = v1 + (float)(y - y1) * dv2Step;
+        float textureEW = w1 + (float)(y - y1) * dw2Step;
+  
+        if (ax > bx) {
+          ax += (bx - (bx = ax));
+          textureSU += (textureEU - (textureEU = textureSU));
+          textureSV += (textureEV - (textureEV = textureSV));
+          textureSW += (textureEW - (textureEW = textureSW));
+        }
 
-  private float vectorDotProduct(Vec3d v1, Vec3d v2) {
-    return v1.x * v2.x + v1.y * v2.y + v1.z * v2.z;
-  }
+        float tStep = 1f / (float)(bx - ax);
+        float t = 0f;
 
-  private float vectorLength(Vec3d v) {
-    return 1 / (float)Math.sqrt(vectorDotProduct(v, v));
-  }
-
-  private Vec3d normalizeVector(Vec3d v) {
-    float l = vectorLength(v);
-    return new Vec3d(v.x * l, v.y * l, v.z * l);
-  }
-
-  private Vec3d vectorCrossProduct(Vec3d v1, Vec3d v2) {
-    return new Vec3d(v1.y * v2.z - v1.z * v2.y, v1.z * v2.x - v1.x * v2.z, v1.x * v2.y - v1.y * v2.x);
-  }
-
-  private Matrix rotationMatrixX(float angle) {
-    Matrix matrix = new Matrix();
-    matrix.matrix[0][0] = 1;
-    matrix.matrix[1][1] = (float)Math.cos(angle);
-    matrix.matrix[1][2] = (float)Math.sin(angle);
-    matrix.matrix[2][1] = -(float)Math.sin(angle);
-    matrix.matrix[2][2] = (float)Math.cos(angle);
-    matrix.matrix[3][3] = 1;
-
-    return matrix;
-  }
-
-  private Matrix rotationMatrixY(float angle) {
-    Matrix matrix = new Matrix();
-    matrix.matrix[0][0] = (float)Math.cos(angle);
-    matrix.matrix[0][2] = (float)Math.sin(angle);
-    matrix.matrix[2][0] = -(float)Math.sin(angle);
-    matrix.matrix[1][1] = 1;
-    matrix.matrix[2][2] = (float)Math.cos(angle);
-    matrix.matrix[3][3] = 1;
-
-    return matrix;
-  }
-
-  @SuppressWarnings("unused")
-  private Matrix rotationMatrixZ(float angle) {
-    Matrix matrix = new Matrix();
-    matrix.matrix[0][0] = (float)Math.cos(angle);
-    matrix.matrix[0][1] = (float)Math.sin(angle);
-    matrix.matrix[1][0] = -(float)Math.sin(angle);
-    matrix.matrix[1][1] = (float)Math.cos(angle);
-    matrix.matrix[2][2] = 1;
-    matrix.matrix[3][3] = 1;
-
-    return matrix;
-  }
-
-  private Matrix translationMatrix(float x, float y, float z) {
-    Matrix matrix = new Matrix();
-    matrix.matrix[0][0] = 1;
-    matrix.matrix[1][1] = 1;
-    matrix.matrix[2][2] = 1;
-    matrix.matrix[3][3] = 1;
-    matrix.matrix[3][0] = x;
-    matrix.matrix[3][1] = y;
-    matrix.matrix[3][2] = z;
-
-    return matrix;
-  }
-
-  private Matrix projectionMatrix(float fov, float aspectRatio, float near, float far) {
-    float fovRadians = 1 / (float)Math.tan(Math.toRadians(fov * 0.5));
-    Matrix matrix = new Matrix(new float[][] {
-      {aspectRatio * fovRadians, 0, 0, 0},
-      {0, fovRadians, 0, 0},
-      {0, 0, far / (far - near), 1},
-      {0, 0, (-far * near) / (far - near), 0}
-    });
-
-    return matrix;
-  }
-
-  private Matrix matrixMultiplyMatrix(Matrix m1, Matrix m2) {
-    Matrix matrix = new Matrix();
-    for (byte c = 0; c < 4; c++) {
-      for (byte r = 0; r < 4; r++) {
-        matrix.matrix[r][c] = m1.matrix[r][0] * m2.matrix[0][c] + m1.matrix[r][1] * m2.matrix[1][c] + m1.matrix[r][2] * m2.matrix[2][c] + m1.matrix[r][3] * m2.matrix[3][c];
+        for (int x = ax; x < bx; x++) {
+          textureU = (1f - t) * textureSU + t * textureEU;
+          textureV = (1f - t) * textureSV + t * textureEV;
+          textureW = (1f - t) * textureSW + t * textureEW;
+          if (textureW > depthBuffer[y][x]) {
+            bufferedImage.setRGB(x, y, sprite.getPixelColor(Math.round((sprite.lengthX() - 1) * (textureU / textureW)), Math.round((sprite.lengthY() - 1) * (textureV / textureW))));
+            depthBuffer[y][x] = textureW;
+          }
+          t += tStep;
+        }
       }
     }
-    return matrix;
-  }
+    dx1 = x3 - x2;
+    dy1 = y3 - y2;
+    du1 = u3 - u2;
+    dv1 = v3 - v2;
+    dw1 = w3 - w2;
 
-  private Matrix matrixPoint(Vec3d pos, Vec3d target, Vec3d up) {
-    Vec3d newForward = subtractVector(target, pos);
-    newForward = normalizeVector(newForward);
+    du1Step = 0;
+    dv1Step = 0;
 
-    Vec3d a = multiplyVector(newForward, vectorDotProduct(up, newForward));
-    Vec3d newUp = subtractVector(up, a);
-    newUp = normalizeVector(newUp);
-
-    Vec3d newRight = vectorCrossProduct(newUp, newForward);
-
-    Matrix matrix = new Matrix(new float[][] {
-      {newRight.x, newRight.y, newRight.z, 0},
-      {newUp.x, newUp.y, newUp.z, 0},
-      {newForward.x, newForward.y, newForward.z, 0},
-      {pos.x, pos.y, pos.z, 1}
-    });
-
-    return matrix;
-  }
-
-  private Matrix quickInverseMatrix(Matrix m) {
-    Matrix matrix = new Matrix();
-    matrix.matrix[0][0] = m.matrix[0][0];
-    matrix.matrix[0][1] = m.matrix[1][0];
-    matrix.matrix[0][2] = m.matrix[2][0];
-    matrix.matrix[0][3] = 0;
-    matrix.matrix[1][0] = m.matrix[0][1];
-    matrix.matrix[1][1] = m.matrix[1][1];
-    matrix.matrix[1][2] = m.matrix[2][1];
-    matrix.matrix[1][3] = 0;
-    matrix.matrix[2][0] = m.matrix[0][2];
-    matrix.matrix[2][1] = m.matrix[1][2];
-    matrix.matrix[2][2] = m.matrix[2][2];
-    matrix.matrix[2][3] = 0;
-    matrix.matrix[3][0] = -(m.matrix[3][0] * matrix.matrix[0][0] + m.matrix[3][1] * matrix.matrix[1][0] + m.matrix[3][2] * matrix.matrix[2][0]);
-    matrix.matrix[3][1] = -(m.matrix[3][0] * matrix.matrix[0][1] + m.matrix[3][1] * matrix.matrix[1][1] + m.matrix[3][2] * matrix.matrix[2][1]);
-    matrix.matrix[3][2] = -(m.matrix[3][0] * matrix.matrix[0][2] + m.matrix[3][1] * matrix.matrix[1][2] + m.matrix[3][2] * matrix.matrix[2][2]);
-    matrix.matrix[3][3] = 1;
-
-    return matrix;
-  }
-
-  private Vec3d vectorPlaneIntersect(Vec3d planeP, Vec3d planeN, Vec3d lineStart, Vec3d lineEnd) {
-    planeN = normalizeVector(planeN);
-    float planeD = -vectorDotProduct(planeN, planeP);
-    float ad = vectorDotProduct(lineStart, planeN);
-    float bd = vectorDotProduct(lineEnd, planeN);
-    float t = (-planeD - ad) / (bd - ad);
-    Vec3d lineStartToEnd = subtractVector(lineEnd, lineStart);
-    Vec3d lineToIntersect = multiplyVector(lineStartToEnd, t);
-
-    return addVector(lineStart, lineToIntersect);
-  }
-
-  private byte trianglePlaneClip(Vec3d planeP, Vec3d planeN, Triangle inTriangle, Triangle outTriangle1, Triangle outTriangle2) {
-    planeN = normalizeVector(planeN);
-    Vec3d[] insidePoints = new Vec3d[3];
-    insidePoints[0] = new Vec3d();
-    insidePoints[1] = new Vec3d();
-    insidePoints[2] = new Vec3d();
-    byte insidePointCount = 0;
-    Vec3d[] outsidePoints = new Vec3d[3];
-    outsidePoints[0] = new Vec3d();
-    outsidePoints[1] = new Vec3d();
-    outsidePoints[2] = new Vec3d();
-    byte outsidePointCount = 0;
-
-    float d0 = planeN.x * inTriangle.point[0].x + planeN.y * inTriangle.point[0].y + planeN.z * inTriangle.point[0].z - vectorDotProduct(planeN, planeP);
-    float d1 = planeN.x * inTriangle.point[1].x + planeN.y * inTriangle.point[1].y + planeN.z * inTriangle.point[1].z - vectorDotProduct(planeN, planeP);
-    float d2 = planeN.x * inTriangle.point[2].x + planeN.y * inTriangle.point[2].y + planeN.z * inTriangle.point[2].z - vectorDotProduct(planeN, planeP);
-
-    if (d0 >= 0) {
-      insidePoints[insidePointCount++].set(inTriangle.point[0]);
+    if (dy1 != 0) {
+      daxStep = dx1 / (float)Math.abs(dy1);
+      du1Step = du1 / (float)Math.abs(dy1);
+      dv1Step = dv1 / (float)Math.abs(dy1);
+      dw1Step = dw1 / (float)Math.abs(dy1);
     }
-    else {
-      outsidePoints[outsidePointCount++].set(inTriangle.point[0]);
-    }
-    if (d1 >= 0) {
-      insidePoints[insidePointCount++].set(inTriangle.point[1]);
-    }
-    else {
-      outsidePoints[outsidePointCount++].set(inTriangle.point[1]);
-    }
-    if (d2 >= 0) {
-      insidePoints[insidePointCount++].set(inTriangle.point[2]);
-    }
-    else {
-      outsidePoints[outsidePointCount++].set(inTriangle.point[2]);
+    if (dy2 != 0) {
+      dbxStep = dx2 / (float)Math.abs(dy2);
     }
 
-    if (insidePointCount == 0) {
-      return 0;
-    }
-    else if (insidePointCount == 3) {
-      outTriangle1.set(inTriangle);
-
-      return 1;
-    }
-
-    else if (insidePointCount == 1 && outsidePointCount == 2) {
-      outTriangle1.color = inTriangle.color;
-
-      outTriangle1.point[0].set(insidePoints[0]);
-      outTriangle1.point[1].set(vectorPlaneIntersect(planeP, planeN, insidePoints[0], outsidePoints[0]));
-      outTriangle1.point[2].set(vectorPlaneIntersect(planeP, planeN, insidePoints[0], outsidePoints[1]));
-
-      return 1;
-    }
-
-    else if (insidePointCount == 2 && outsidePointCount == 1) {
-      outTriangle1.color = inTriangle.color;
-      outTriangle2.color = inTriangle.color;
-
-      outTriangle1.point[0].set(insidePoints[0]);
-      outTriangle1.point[1].set(insidePoints[1]);
-      outTriangle1.point[2].set(vectorPlaneIntersect(planeP, planeN, insidePoints[0], outsidePoints[0]));
-
-      outTriangle2.point[0].set(insidePoints[1]);
-      outTriangle2.point[1].set(outTriangle1.point[2]);
-      outTriangle2.point[2].set(vectorPlaneIntersect(planeP, planeN, insidePoints[1], outsidePoints[0]));
-
-      return 2;
-    }
-
-    return 0;
-  }
-
-  private void getKeys() {
-    Vec3d forward = multiplyVector(lookDirection, MOVEMENT_SPEED / fps.getFPS());
-    Vec3d side = multiplyVector(sideDirection, MOVEMENT_SPEED / fps.getFPS());
-
-    if (Keys.pressedKeys.contains(KeyEvent.VK_W)) {
-      camera = addVector(camera, forward);
-    }
-    
-    if (Keys.pressedKeys.contains(KeyEvent.VK_S)) {
-      camera = subtractVector(camera, forward);
-    }
-
-    if (Keys.pressedKeys.contains(KeyEvent.VK_A)) {
-      camera = subtractVector(camera, side);
-    }
-    
-    if (Keys.pressedKeys.contains(KeyEvent.VK_D)) {
-      camera = addVector(camera, side);
-    }
-    
-    if (Keys.pressedKeys.contains(KeyEvent.VK_SPACE)) {
-      camera.y += MOVEMENT_SPEED / fps.getFPS();
-    }
-    
-    if (Keys.pressedKeys.contains(KeyEvent.VK_SHIFT)) {
-      camera.y -= MOVEMENT_SPEED / fps.getFPS();
-    }
-
-  }
+    if (dy1 != 0) {
+      for (int y = y2; y <= y3; y++) {
+        int ax = Math.round(x2 + (float)(y - y2) * daxStep);
+        int bx = Math.round(x1 + (float)(y - y1) * dbxStep);
   
-  private void getMouse() {
-    pitch = Mouse.origin.y * MOUSE_SENSITIVITY / HEIGHT;
-    yaw = Mouse.origin.x * MOUSE_SENSITIVITY / WIDTH;
+        float textureSU = u2 + (float)(y - y2) * du1Step;
+        float textureSV = v2 + (float)(y - y2) * dv1Step;
+        float textureSW = w2 + (float)(y - y2) * dw1Step;
+  
+        float textureEU = u1 + (float)(y - y1) * du2Step;
+        float textureEV = v1 + (float)(y - y1) * dv2Step;
+        float textureEW = w1 + (float)(y - y1) * dw2Step;
+  
+        if (ax > bx) {
+          ax += (bx - (bx = ax));
+          textureSU += (textureEU - (textureEU = textureSU));
+          textureSV += (textureEV - (textureEV = textureSV));
+          textureSW += (textureEW - (textureEW = textureSW));
+  
+        }
+  
+        float tStep = 1f / (float)(bx - ax);
+        float t = 0f;
+  
+        for (int x = ax; x < bx; x++) {
+          textureU = (1f - t) * textureSU + t * textureEU;
+          textureV = (1f - t) * textureSV + t * textureEV;
+          textureW = (1f - t) * textureSW + t * textureEW;
+          if (textureW > depthBuffer[y][x]) {
+            bufferedImage.setRGB(x, y, sprite.getPixelColor(Math.round((sprite.lengthX() - 1) * (textureU / textureW)), Math.round((sprite.lengthY() - 1) * (textureV / textureW))));
+            depthBuffer[y][x] = textureW;
+          }
+          t += tStep;
+        }
+      }
+    }
   }
 }
