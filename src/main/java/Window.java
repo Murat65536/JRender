@@ -16,7 +16,7 @@ public class Window extends JPanel implements ActionListener {
   private BufferedImage bufferedImage;
   private final JLabel jLabel = new JLabel();
   private final Timer timer = new Timer(0, this);
-  private static final Mesh mesh = new Mesh();
+  private ArrayList<Mesh> meshes = new ArrayList<>();
   public static Vec3d camera = new Vec3d();
   public static Vec3d lookDirection = new Vec3d();
   public static Vec3d strafeDirection = new Vec3d();
@@ -24,7 +24,6 @@ public class Window extends JPanel implements ActionListener {
   public static float yaw = 0;
   private FPS fps = new FPS();
   private Graphics2D graphics;
-  private Sprite sprite = new Sprite("src/main/resources/test_texture.jpg");
   private float[][] depthBuffer = new float[Main.height][Main.width];
 
   public Window() {
@@ -32,7 +31,8 @@ public class Window extends JPanel implements ActionListener {
     resizeBufferedImage();
     this.setLayout(new GridLayout());
     timer.start();
-    mesh.loadObject("cube.obj", true);
+    meshes.add(new Mesh("cube.obj", true));
+    meshes.add(new Mesh("cube1.obj", true));
   }
 
   @Override
@@ -59,168 +59,175 @@ public class Window extends JPanel implements ActionListener {
     
     ArrayList<Triangle> trianglesToRaster = new ArrayList<>();
 
-    for (Triangle triangle : mesh.triangles) {
-      Triangle projectedTriangle = new Triangle();
-      Triangle transformedTriangle = new Triangle();
-      Triangle triangleViewed = new Triangle();
-      
-      transformedTriangle.point[0].set(Vec3d.multiplyMatrix(worldMatrix, triangle.point[0]));
-      transformedTriangle.point[1].set(Vec3d.multiplyMatrix(worldMatrix, triangle.point[1]));
-      transformedTriangle.point[2].set(Vec3d.multiplyMatrix(worldMatrix, triangle.point[2]));
-      transformedTriangle.texture[0].set(triangle.texture[0]);
-      transformedTriangle.texture[1].set(triangle.texture[1]);
-      transformedTriangle.texture[2].set(triangle.texture[2]);
-
-      Vec3d line1 = Vec3d.subtract(transformedTriangle.point[1], transformedTriangle.point[0]);
-      Vec3d line2 = Vec3d.subtract(transformedTriangle.point[2], transformedTriangle.point[0]);
-      Vec3d normal = Vec3d.normalize(Vec3d.crossProduct(line1, line2));
-      Vec3d cameraRay = Vec3d.subtract(transformedTriangle.point[0], camera);
-
-      if (Vec3d.dotProduct(normal, cameraRay) < 0) {
-
-        Vec3d lightDirection = new Vec3d(0, 1, -1);
-        lightDirection = Vec3d.normalize(lightDirection);
-        transformedTriangle.color = (short)(Math.max(0.1f, Vec3d.dotProduct(lightDirection, normal)) * 255);
-
-        triangleViewed.point[0].set(Vec3d.multiplyMatrix(viewMatrix, transformedTriangle.point[0]));
-        triangleViewed.point[1].set(Vec3d.multiplyMatrix(viewMatrix, transformedTriangle.point[1]));
-        triangleViewed.point[2].set(Vec3d.multiplyMatrix(viewMatrix, transformedTriangle.point[2]));
-        triangleViewed.color = transformedTriangle.color;
-        triangleViewed.texture[0].set(transformedTriangle.texture[0]);
-        triangleViewed.texture[1].set(transformedTriangle.texture[1]);
-        triangleViewed.texture[2].set(transformedTriangle.texture[2]);
-        
-        Triangle[] clipped = new Triangle[] {new Triangle(), new Triangle()};
-        byte clippedTriangles = Triangle.clipPlane(new Vec3d(0, 0, 0.1f), new Vec3d(0, 0, 1), triangleViewed, clipped[0], clipped[1]);
-        for (byte j = 0; j < clippedTriangles; j++) {
-          projectedTriangle.point[0].set(Vec3d.multiplyMatrix(projection, clipped[j].point[0]));
-          projectedTriangle.point[1].set(Vec3d.multiplyMatrix(projection, clipped[j].point[1]));
-          projectedTriangle.point[2].set(Vec3d.multiplyMatrix(projection, clipped[j].point[2]));
-          projectedTriangle.color = clipped[j].color;
-          projectedTriangle.texture[0].set(clipped[j].texture[0]);
-          projectedTriangle.texture[1].set(clipped[j].texture[1]);
-          projectedTriangle.texture[2].set(clipped[j].texture[2]);
-
-          projectedTriangle.texture[0].setU(projectedTriangle.texture[0].getU() / projectedTriangle.point[0].getW());
-          projectedTriangle.texture[1].setU(projectedTriangle.texture[1].getU() / projectedTriangle.point[1].getW());
-          projectedTriangle.texture[2].setU(projectedTriangle.texture[2].getU() / projectedTriangle.point[2].getW());
-
-          projectedTriangle.texture[0].setV(projectedTriangle.texture[0].getV() / projectedTriangle.point[0].getW());
-          projectedTriangle.texture[1].setV(projectedTriangle.texture[1].getV() / projectedTriangle.point[1].getW());
-          projectedTriangle.texture[2].setV(projectedTriangle.texture[2].getV() / projectedTriangle.point[2].getW());
-
-          projectedTriangle.texture[0].setW(1f / projectedTriangle.point[0].getW());
-          projectedTriangle.texture[1].setW(1f / projectedTriangle.point[1].getW());
-          projectedTriangle.texture[2].setW(1f / projectedTriangle.point[2].getW());
-
-          projectedTriangle.point[0].set(Vec3d.divide(projectedTriangle.point[0], projectedTriangle.point[0].getW()));
-          projectedTriangle.point[1].set(Vec3d.divide(projectedTriangle.point[1], projectedTriangle.point[1].getW()));
-          projectedTriangle.point[2].set(Vec3d.divide(projectedTriangle.point[2], projectedTriangle.point[2].getW()));
-        
-          projectedTriangle.point[0].setX(projectedTriangle.point[0].getX() * -1);
-          projectedTriangle.point[1].setX(projectedTriangle.point[1].getX() * -1);
-          projectedTriangle.point[2].setX(projectedTriangle.point[2].getX() * -1);
-          projectedTriangle.point[0].setY(projectedTriangle.point[0].getY() * -1);
-          projectedTriangle.point[1].setY(projectedTriangle.point[1].getY() * -1);
-          projectedTriangle.point[2].setY(projectedTriangle.point[2].getY() * -1);
-
-          Vec3d offsetView = new Vec3d(1, 1, 0);
-          projectedTriangle.point[0].set(Vec3d.add(projectedTriangle.point[0], offsetView));
-          projectedTriangle.point[1].set(Vec3d.add(projectedTriangle.point[1], offsetView));
-          projectedTriangle.point[2].set(Vec3d.add(projectedTriangle.point[2], offsetView));
-
-          projectedTriangle.point[0].setX(projectedTriangle.point[0].getX() * 0.5f * Main.width);
-          projectedTriangle.point[0].setY(projectedTriangle.point[0].getY() * 0.5f * Main.height);
-          projectedTriangle.point[1].setX(projectedTriangle.point[1].getX() * 0.5f * Main.width);
-          projectedTriangle.point[1].setY(projectedTriangle.point[1].getY() * 0.5f * Main.height);
-          projectedTriangle.point[2].setX(projectedTriangle.point[2].getX() * 0.5f * Main.width);
-          projectedTriangle.point[2].setY(projectedTriangle.point[2].getY() * 0.5f * Main.height);
-          trianglesToRaster.add(projectedTriangle.clone());
-        }
-      }
-    }
-
-    // Not needed until transparent or translucent material is added.
-
-    // Collections.sort(trianglesToRaster, (t1, t2) -> {
-    //   float z1 = t1.point[0].getZ() + t1.point[1].getZ() + t1.point[2].getZ();
-    //   float z2 = t2.point[0].getZ() + t2.point[1].getZ() + t2.point[2].getZ();
-
-    //   if (z1 > z2) {
-    //     return -1;
-    //   }
-    //   else if (z1 < z2) {
-    //     return 1;
-    //   }
-    //   return 0;
-    // });
-
-    graphics.setColor(Color.BLACK);
-    graphics.fillRect(0, 0, Main.width, Main.height);
-
-    depthBuffer = new float[Main.height][Main.width];
-
-    for (Triangle rasterizedTriangles : trianglesToRaster) {
-      Triangle[] clipped = new Triangle[] {new Triangle(), new Triangle()};
-      ArrayList<Triangle> triangleList = new ArrayList<>();
-      triangleList.add(rasterizedTriangles);
-      int newTriangles = 1;
-      for (byte side = 0; side < 4; side++) {
-        int trianglesToAdd = 0;
-        while (newTriangles > 0) {
-          Triangle test = triangleList.get(0);
-          triangleList.remove(0);
-          newTriangles--;
-          switch (side) {
-            case 0:
-              trianglesToAdd = Triangle.clipPlane(new Vec3d(0, 0, 0), new Vec3d(0, 1, 0), test, clipped[0], clipped[1]);
-              break;
-            case 1:
-              trianglesToAdd = Triangle.clipPlane(new Vec3d(0, Main.height - 1, 0), new Vec3d(0, -1, 0), test, clipped[0], clipped[1]);
-              break;
-            case 2:
-              trianglesToAdd = Triangle.clipPlane(new Vec3d(0, 0, 0), new Vec3d(1, 0, 0), test, clipped[0], clipped[1]);
-              break;
-            case 3:
-              trianglesToAdd = Triangle.clipPlane(new Vec3d(Main.width - 1, 0, 0), new Vec3d(-1, 0, 0), test, clipped[0], clipped[1]);
-              break;
-          }
-          for (byte w = 0; w < trianglesToAdd; w++) {
-            triangleList.add(clipped[w].clone());
-          }
-        }
-        newTriangles = triangleList.size();
-      }
-
-      for (Triangle triangle : triangleList) {
-        textureTriangle(
-          Math.round(triangle.point[0].getX()), Math.round(triangle.point[0].getY()), triangle.texture[0].getU(), triangle.texture[0].getV(), triangle.texture[0].getW(),
-          Math.round(triangle.point[1].getX()), Math.round(triangle.point[1].getY()), triangle.texture[1].getU(), triangle.texture[1].getV(), triangle.texture[1].getW(),
-          Math.round(triangle.point[2].getX()), Math.round(triangle.point[2].getY()), triangle.texture[2].getU(), triangle.texture[2].getV(), triangle.texture[2].getW(),
-          sprite
+    for (Mesh mesh : meshes) {
+      for (Triangle triangle : mesh.getTriangles()) {
+        Triangle transformedTriangle = new Triangle(
+          Vec3d.multiplyMatrix(worldMatrix, triangle.point[0]),
+          Vec3d.multiplyMatrix(worldMatrix, triangle.point[1]),
+          Vec3d.multiplyMatrix(worldMatrix, triangle.point[2]),
+          triangle.texture[0],
+          triangle.texture[1],
+          triangle.texture[2],
+          triangle.color
         );
-        // graphics.setColor(new Color(triangle.color, triangle.color, triangle.color));
-        // graphics.fillPolygon(new int[] {
-        //   (short)triangle.point[0].getX(),
-        //   (short)triangle.point[1].getX(),
-        //   (short)triangle.point[2].getX()
-        // }, new int[] {
-        //   (short)triangle.point[0].getY(),
-        //   (short)triangle.point[1].getY(),
-        //   (short)triangle.point[2].getY()
-        // }, 3);
-        // graphics.setColor(Color.WHITE);
-        // graphics.drawPolygon(new int[] {
-        //   (int)triangle.point[0].getX(),
-        //   (int)triangle.point[1].getX(),
-        //   (int)triangle.point[2].getX()
-        // }, new int[] {
-        //   (int)triangle.point[0].getY(),
-        //   (int)triangle.point[1].getY(),
-        //   (int)triangle.point[2].getY()
-        // }, 3);
+        
+          Vec3d line1 = Vec3d.subtract(transformedTriangle.point[1], transformedTriangle.point[0]);
+          Vec3d line2 = Vec3d.subtract(transformedTriangle.point[2], transformedTriangle.point[0]);
+          Vec3d normal = Vec3d.normalize(Vec3d.crossProduct(line1, line2));
+          Vec3d cameraRay = Vec3d.subtract(transformedTriangle.point[0], camera);
+
+          if (Vec3d.dotProduct(normal, cameraRay) < 0) {
+
+            Vec3d lightDirection = new Vec3d(0, 1, -1);
+            lightDirection = Vec3d.normalize(lightDirection);
+            transformedTriangle.color = (short)(Math.max(0.1f, Vec3d.dotProduct(lightDirection, normal)) * 255);
+
+          Triangle triangleViewed = new Triangle(
+            Vec3d.multiplyMatrix(viewMatrix, transformedTriangle.point[0]),
+            Vec3d.multiplyMatrix(viewMatrix, transformedTriangle.point[1]),
+            Vec3d.multiplyMatrix(viewMatrix, transformedTriangle.point[2]),
+            transformedTriangle.texture[0],
+            transformedTriangle.texture[1],
+            transformedTriangle.texture[2],
+            transformedTriangle.color
+          );
+
+          Triangle[] clipped = new Triangle[] {new Triangle(), new Triangle()};
+          byte clippedTriangles = Triangle.clipPlane(new Vec3d(0, 0, 0.1f), new Vec3d(0, 0, 1), triangleViewed, clipped[0], clipped[1]);
+          for (byte j = 0; j < clippedTriangles; j++) {
+            Triangle projectedTriangle = new Triangle(
+              Vec3d.multiplyMatrix(projection, clipped[j].point[0]),
+              Vec3d.multiplyMatrix(projection, clipped[j].point[1]),
+              Vec3d.multiplyMatrix(projection, clipped[j].point[2]),
+              clipped[j].texture[0],
+              clipped[j].texture[1],
+              clipped[j].texture[2],
+              clipped[j].color
+            );
+
+            projectedTriangle.texture[0].setU(projectedTriangle.texture[0].getU() / projectedTriangle.point[0].getW());
+            projectedTriangle.texture[1].setU(projectedTriangle.texture[1].getU() / projectedTriangle.point[1].getW());
+            projectedTriangle.texture[2].setU(projectedTriangle.texture[2].getU() / projectedTriangle.point[2].getW());
+
+            projectedTriangle.texture[0].setV(projectedTriangle.texture[0].getV() / projectedTriangle.point[0].getW());
+            projectedTriangle.texture[1].setV(projectedTriangle.texture[1].getV() / projectedTriangle.point[1].getW());
+            projectedTriangle.texture[2].setV(projectedTriangle.texture[2].getV() / projectedTriangle.point[2].getW());
+
+            projectedTriangle.texture[0].setW(1f / projectedTriangle.point[0].getW());
+            projectedTriangle.texture[1].setW(1f / projectedTriangle.point[1].getW());
+            projectedTriangle.texture[2].setW(1f / projectedTriangle.point[2].getW());
+
+            projectedTriangle.point[0].set(Vec3d.divide(projectedTriangle.point[0], projectedTriangle.point[0].getW()));
+            projectedTriangle.point[1].set(Vec3d.divide(projectedTriangle.point[1], projectedTriangle.point[1].getW()));
+            projectedTriangle.point[2].set(Vec3d.divide(projectedTriangle.point[2], projectedTriangle.point[2].getW()));
+
+            projectedTriangle.point[0].setX(projectedTriangle.point[0].getX() * -1);
+            projectedTriangle.point[1].setX(projectedTriangle.point[1].getX() * -1);
+            projectedTriangle.point[2].setX(projectedTriangle.point[2].getX() * -1);
+            projectedTriangle.point[0].setY(projectedTriangle.point[0].getY() * -1);
+            projectedTriangle.point[1].setY(projectedTriangle.point[1].getY() * -1);
+            projectedTriangle.point[2].setY(projectedTriangle.point[2].getY() * -1);
+
+            Vec3d offsetView = new Vec3d(1, 1, 0);
+            projectedTriangle.point[0].set(Vec3d.add(projectedTriangle.point[0], offsetView));
+            projectedTriangle.point[1].set(Vec3d.add(projectedTriangle.point[1], offsetView));
+            projectedTriangle.point[2].set(Vec3d.add(projectedTriangle.point[2], offsetView));
+
+            projectedTriangle.point[0].setX(projectedTriangle.point[0].getX() * 0.5f * Main.width);
+            projectedTriangle.point[0].setY(projectedTriangle.point[0].getY() * 0.5f * Main.height);
+            projectedTriangle.point[1].setX(projectedTriangle.point[1].getX() * 0.5f * Main.width);
+            projectedTriangle.point[1].setY(projectedTriangle.point[1].getY() * 0.5f * Main.height);
+            projectedTriangle.point[2].setX(projectedTriangle.point[2].getX() * 0.5f * Main.width);
+            projectedTriangle.point[2].setY(projectedTriangle.point[2].getY() * 0.5f * Main.height);
+            trianglesToRaster.add(projectedTriangle.clone());
+          }
+        }
+      }
+
+      // Not needed until transparent or translucent material is added.
+
+      // Collections.sort(trianglesToRaster, (t1, t2) -> {
+      //   float z1 = t1.point[0].getZ() + t1.point[1].getZ() + t1.point[2].getZ();
+      //   float z2 = t2.point[0].getZ() + t2.point[1].getZ() + t2.point[2].getZ();
+
+      //   if (z1 > z2) {
+      //     return -1;
+      //   }
+      //   else if (z1 < z2) {
+      //     return 1;
+      //   }
+      //   return 0;
+      // });
+
+      graphics.setColor(Color.BLACK);
+      graphics.fillRect(0, 0, Main.width, Main.height);
+
+      depthBuffer = new float[Main.height][Main.width];
+
+      for (Triangle rasterizedTriangles : trianglesToRaster) {
+        Triangle[] clipped = new Triangle[] {new Triangle(), new Triangle()};
+        ArrayList<Triangle> triangleList = new ArrayList<>();
+        triangleList.add(rasterizedTriangles);
+        int newTriangles = 1;
+        for (byte side = 0; side < 4; side++) {
+          byte trianglesToAdd = 0;
+          while (newTriangles > 0) {
+            switch (side) {
+              case 0:
+                trianglesToAdd = Triangle.clipPlane(new Vec3d(0, 0, 0), new Vec3d(0, 1, 0), triangleList.get(0), clipped[0], clipped[1]);
+                break;
+              case 1:
+                trianglesToAdd = Triangle.clipPlane(new Vec3d(0, Main.height - 1, 0), new Vec3d(0, -1, 0), triangleList.get(0), clipped[0], clipped[1]);
+                break;
+              case 2:
+                trianglesToAdd = Triangle.clipPlane(new Vec3d(0, 0, 0), new Vec3d(1, 0, 0), triangleList.get(0), clipped[0], clipped[1]);
+                break;
+              case 3:
+                trianglesToAdd = Triangle.clipPlane(new Vec3d(Main.width - 1, 0, 0), new Vec3d(-1, 0, 0), triangleList.get(0), clipped[0], clipped[1]);
+                break;
+            }
+
+            triangleList.remove(0);
+            newTriangles--;
+
+            for (byte w = 0; w < trianglesToAdd; w++) {
+              triangleList.add(clipped[w].clone());
+            }
+          }
+          newTriangles = triangleList.size();
+        }
+
+        for (Triangle triangle : triangleList) {
+          textureTriangle(
+            Math.round(triangle.point[0].getX()), Math.round(triangle.point[0].getY()), triangle.texture[0].getU(), triangle.texture[0].getV(), triangle.texture[0].getW(),
+            Math.round(triangle.point[1].getX()), Math.round(triangle.point[1].getY()), triangle.texture[1].getU(), triangle.texture[1].getV(), triangle.texture[1].getW(),
+            Math.round(triangle.point[2].getX()), Math.round(triangle.point[2].getY()), triangle.texture[2].getU(), triangle.texture[2].getV(), triangle.texture[2].getW(),
+            mesh.getSprite()
+          );
+          // graphics.setColor(new Color(triangle.color, triangle.color, triangle.color));
+          // graphics.fillPolygon(new int[] {
+          //   (short)triangle.point[0].getX(),
+          //   (short)triangle.point[1].getX(),
+          //   (short)triangle.point[2].getX()
+          // }, new int[] {
+          //   (short)triangle.point[0].getY(),
+          //   (short)triangle.point[1].getY(),
+          //   (short)triangle.point[2].getY()
+          // }, 3);
+          // graphics.setColor(Color.WHITE);
+          // graphics.drawPolygon(new int[] {
+          //   (int)triangle.point[0].getX(),
+          //   (int)triangle.point[1].getX(),
+          //   (int)triangle.point[2].getX()
+          // }, new int[] {
+          //   (int)triangle.point[0].getY(),
+          //   (int)triangle.point[1].getY(),
+          //   (int)triangle.point[2].getY()
+          // }, 3);
+        }
       }
     }
+    graphics.setColor(Color.WHITE);
     graphics.drawString(Float.toString(fps.getFPS()), 100, 100);
     jLabel.repaint();
     fps.update();

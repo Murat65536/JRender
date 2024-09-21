@@ -9,22 +9,19 @@ import java.io.FileNotFoundException;
 import java.util.Scanner;
 
 public class Mesh {
-  public ArrayList<Triangle> triangles = new ArrayList<>();
-  public ArrayList<Vec3d> vertexNormals = new ArrayList<>();
-  public ArrayList<Vec2d> textureCoords = new ArrayList<>();
+  private ArrayList<Triangle> triangles = new ArrayList<>();
+  private ArrayList<Vec3d> vertexNormals = new ArrayList<>();
+  private ArrayList<Vec2d> textureCoords = new ArrayList<>();
   private final String PATH = "src/main/resources/";
-  public Map<String, Map<String, String[]>> textures = new HashMap<>();
+  private Map<String, Map<String, String[]>> textures = new HashMap<>();
   private Map<String, String[]> attributes = new HashMap<>();
-  @SuppressWarnings("unused")
-  private String currentTexture = null;
+  private Sprite sprite;
 
   public Mesh(List<Triangle> triangles) {
     this.triangles.addAll(triangles);
   }
 
-  public Mesh() {}
-
-  public void loadObject(String fileName, boolean hasTexture) {
+  public Mesh(String fileName, boolean hasTexture) {
     try {
       File file = new File(PATH + fileName);
       Scanner reader = new Scanner(file);
@@ -73,9 +70,6 @@ public class Mesh {
         else if (data.startsWith("vt")) {
           textureCoords.add(new Vec2d(Float.parseFloat(splitData[1]), Float.parseFloat(splitData[2])));
         }
-        else if (data.startsWith("usemtl ")) {
-          currentTexture = splitData[1];
-        }
       }
       reader.close();
     }
@@ -84,7 +78,7 @@ public class Mesh {
     }
   }
 
-  private void loadTexture(String fileName) {
+  public void loadTexture(String fileName) {
     try {
       File file = new File(PATH + fileName);
       Scanner reader = new Scanner(file);
@@ -113,7 +107,8 @@ public class Mesh {
           attributes.put("Dissolve", new String[] {splitData[1]});
         }
         else if (data.startsWith("map_Kd ")) {
-          attributes.put("Diffuse Texture Map", new String[] {splitData[1]});
+          sprite = new Sprite(splitData[1]);
+          // attributes.put("Diffuse Texture Map", new String[] {splitData[1]});
         }
       }
       reader.close();
@@ -121,5 +116,25 @@ public class Mesh {
     catch (FileNotFoundException exception) {
       exception.printStackTrace();
     }
+  }
+
+  public Sprite getSprite() {
+    return this.sprite;
+  }
+
+  public ArrayList<Triangle> getTriangles() {
+    return this.triangles;
+  }
+
+  public ArrayList<Vec3d> getVertexNormals() {
+    return this.vertexNormals;
+  }
+
+  public ArrayList<Vec2d> getTextureCoords() {
+    return this.textureCoords;
+  }
+
+  public Map<String, Map<String, String[]>> getTextures() {
+    return this.textures;
   }
 }

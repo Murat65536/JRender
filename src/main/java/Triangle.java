@@ -36,6 +36,25 @@ public class Triangle {
     texture[2] = new Vec2d();
   }
 
+  public Triangle(Vec3d point1, Vec3d point2, Vec3d point3, Vec2d texture1, Vec2d texture2, Vec2d texture3) {
+    point[0] = point1.clone();
+    point[1] = point2.clone();
+    point[2] = point3.clone();
+    texture[0] = texture1.clone();
+    texture[1] = texture2.clone();
+    texture[2] = texture3.clone();
+  }
+
+  public Triangle(Vec3d point1, Vec3d point2, Vec3d point3, Vec2d texture1, Vec2d texture2, Vec2d texture3, short color) {
+    point[0] = point1.clone();
+    point[1] = point2.clone();
+    point[2] = point3.clone();
+    texture[0] = texture1.clone();
+    texture[1] = texture2.clone();
+    texture[2] = texture3.clone();
+    this.color = color;
+  }
+
   public Triangle(Vec3d point1, Vec3d point2, Vec3d point3, int[] normalIndices) {
     point[0] = point1.clone();
     point[1] = point2.clone();
@@ -54,16 +73,6 @@ public class Triangle {
     texture[1] = texture2.clone();
     texture[2] = texture3.clone();
     this.normalIndices = normalIndices;
-  }
-
-  public Triangle(Vec3d point1, Vec3d point2, Vec3d point3, Vec2d texture1, Vec2d texture2, Vec2d texture3, short color) {
-    point[0] = point1.clone();
-    point[1] = point2.clone();
-    point[2] = point3.clone();
-    texture[0] = texture1.clone();
-    texture[1] = texture2.clone();
-    texture[2] = texture3.clone();
-    this.color = color;
   }
 
   public Triangle() {
