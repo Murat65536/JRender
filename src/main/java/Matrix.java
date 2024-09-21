@@ -1,78 +1,66 @@
 package src.main.java;
 
 public class Matrix {
-  public float[][] matrix = new float[4][4];
+  public float[][] matrix;
 
   public Matrix(float[][] matrix) {
     this.matrix = matrix;
   }
 
   public Matrix() {
-    matrix[0][0] = 1;
-    matrix[1][1] = 1;
-    matrix[2][2] = 1;
-    matrix[3][3] = 1;
+    this.matrix = new float[][] {
+      {1, 0, 0, 0},
+      {0, 1, 0, 0},
+      {0, 0, 1, 0},
+      {0, 0, 0, 1}
+    };
   }
 
   public static Matrix rotationX(float angle) {
-    Matrix matrix = new Matrix();
-    matrix.matrix[0][0] = 1;
-    matrix.matrix[1][1] = (float)Math.cos(angle);
-    matrix.matrix[1][2] = (float)Math.sin(angle);
-    matrix.matrix[2][1] = -(float)Math.sin(angle);
-    matrix.matrix[2][2] = (float)Math.cos(angle);
-    matrix.matrix[3][3] = 1;
-
-    return matrix;
+    return new Matrix(new float[][] {
+      {1, 0, 0, 0},
+      {0, (float)Math.cos(angle), (float)Math.sin(angle), 0},
+      {0, -(float)Math.sin(angle), (float)Math.cos(angle), 0},
+      {0, 0, 0, 1}
+    });
   }
 
   public static Matrix rotationY(float angle) {
-    Matrix matrix = new Matrix();
-    matrix.matrix[0][0] = (float)Math.cos(angle);
-    matrix.matrix[0][2] = (float)Math.sin(angle);
-    matrix.matrix[2][0] = -(float)Math.sin(angle);
-    matrix.matrix[1][1] = 1;
-    matrix.matrix[2][2] = (float)Math.cos(angle);
-    matrix.matrix[3][3] = 1;
-
-    return matrix;
+    return new Matrix(new float[][] {
+      {(float)Math.cos(angle), 0, (float)Math.sin(angle), 0},
+      {0, 1, 0, 0},
+      {-(float)Math.sin(angle), 0, (float)Math.cos(angle), 0},
+      {0, 0, 0, 1}
+    });
   }
 
   public static Matrix rotationZ(float angle) {
-    Matrix matrix = new Matrix();
-    matrix.matrix[0][0] = (float)Math.cos(angle);
-    matrix.matrix[0][1] = (float)Math.sin(angle);
-    matrix.matrix[1][0] = -(float)Math.sin(angle);
-    matrix.matrix[1][1] = (float)Math.cos(angle);
-    matrix.matrix[2][2] = 1;
-    matrix.matrix[3][3] = 1;
-
-    return matrix;
+    return new Matrix(new float[][] {
+      {(float)Math.cos(angle), (float)Math.sin(angle), 0, 0},
+      {-(float)Math.sin(angle), (float)Math.cos(angle), 0, 0},
+      {0, 0, 1, 0},
+      {0, 0, 0, 1}
+    });
   }
 
   public static Matrix translation(float x, float y, float z) {
-    Matrix matrix = new Matrix();
-    matrix.matrix[0][0] = 1;
-    matrix.matrix[1][1] = 1;
-    matrix.matrix[2][2] = 1;
-    matrix.matrix[3][3] = 1;
-    matrix.matrix[3][0] = x;
-    matrix.matrix[3][1] = y;
-    matrix.matrix[3][2] = z;
-
-    return matrix;
+    return new Matrix(new float[][] {
+      {1, 0, 0, 0},
+      {0, 1, 0, 0},
+      {0, 0, 1, 0},
+      {x, y, z, 1}
+    });
   }
 
   public static Matrix projection(float fov, float aspectRatio, float near, float far) {
     float fovRadians = 1 / (float)Math.tan(Math.toRadians(fov * 0.5));
-    Matrix matrix = new Matrix(new float[][] {
+
+    return new Matrix(new float[][] {
       {aspectRatio * fovRadians, 0, 0, 0},
       {0, fovRadians, 0, 0},
       {0, 0, far / (far - near), 1},
       {0, 0, (-far * near) / (far - near), 0}
     });
-
-    return matrix;
   }
 
   public static Matrix multiply(Matrix m1, Matrix m2) {
@@ -95,35 +83,25 @@ public class Matrix {
 
     Vec3d newRight = Vec3d.crossProduct(newUp, newForward);
 
-    Matrix matrix = new Matrix(new float[][] {
+    return new Matrix(new float[][] {
       {newRight.getX(), newRight.getY(), newRight.getZ(), 0},
       {newUp.getX(), newUp.getY(), newUp.getZ(), 0},
       {newForward.getX(), newForward.getY(), newForward.getZ(), 0},
       {pos.getX(), pos.getY(), pos.getZ(), 1}
     });
-
-    return matrix;
   }
 
   public static Matrix inverse(Matrix m) {
-    Matrix matrix = new Matrix();
-    matrix.matrix[0][0] = m.matrix[0][0];
-    matrix.matrix[0][1] = m.matrix[1][0];
-    matrix.matrix[0][2] = m.matrix[2][0];
-    matrix.matrix[0][3] = 0;
-    matrix.matrix[1][0] = m.matrix[0][1];
-    matrix.matrix[1][1] = m.matrix[1][1];
-    matrix.matrix[1][2] = m.matrix[2][1];
-    matrix.matrix[1][3] = 0;
-    matrix.matrix[2][0] = m.matrix[0][2];
-    matrix.matrix[2][1] = m.matrix[1][2];
-    matrix.matrix[2][2] = m.matrix[2][2];
-    matrix.matrix[2][3] = 0;
-    matrix.matrix[3][0] = -(m.matrix[3][0] * matrix.matrix[0][0] + m.matrix[3][1] * matrix.matrix[1][0] + m.matrix[3][2] * matrix.matrix[2][0]);
-    matrix.matrix[3][1] = -(m.matrix[3][0] * matrix.matrix[0][1] + m.matrix[3][1] * matrix.matrix[1][1] + m.matrix[3][2] * matrix.matrix[2][1]);
-    matrix.matrix[3][2] = -(m.matrix[3][0] * matrix.matrix[0][2] + m.matrix[3][1] * matrix.matrix[1][2] + m.matrix[3][2] * matrix.matrix[2][2]);
-    matrix.matrix[3][3] = 1;
-
-    return matrix;
+    return new Matrix(new float[][] {
+      {m.matrix[0][0], m.matrix[1][0], m.matrix[2][0], 0},
+      {m.matrix[0][1], m.matrix[1][1], m.matrix[2][1], 0},
+      {m.matrix[0][2], m.matrix[1][2], m.matrix[2][2], 0},
+      {
+        -(m.matrix[3][0] * m.matrix[0][0] + m.matrix[3][1] * m.matrix[0][1] + m.matrix[3][2] * m.matrix[0][2]),
+        -(m.matrix[3][0] * m.matrix[1][0] + m.matrix[3][1] * m.matrix[1][1] + m.matrix[3][2] * m.matrix[1][2]),
+        -(m.matrix[3][0] * m.matrix[2][0] + m.matrix[3][1] * m.matrix[2][1] + m.matrix[3][2] * m.matrix[2][2]),
+        1
+      }
+    });
   }
 }

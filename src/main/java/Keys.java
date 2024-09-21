@@ -1,8 +1,8 @@
 package src.main.java;
 
-import java.util.ArrayList;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
+import java.util.ArrayList;
 
 public class Keys implements KeyListener {
   public static ArrayList<Integer> pressedKeys = new ArrayList<>();

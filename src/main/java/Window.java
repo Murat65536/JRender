@@ -31,8 +31,8 @@ public class Window extends JPanel implements ActionListener {
     resizeBufferedImage();
     this.setLayout(new GridLayout());
     timer.start();
-    meshes.add(new Mesh("cube.obj", true));
-    meshes.add(new Mesh("cube1.obj", true));
+    meshes.add(new Mesh("cube.obj"));
+    meshes.add(new Mesh("cube1.obj"));
   }
 
   @Override
@@ -43,7 +43,7 @@ public class Window extends JPanel implements ActionListener {
     Keys.getKeys(fps);
     pitch = Mouse.getPitch();
     yaw = Mouse.getYaw();
-    Matrix worldMatrix = Matrix.translation(0, 0, 5);
+    Matrix worldMatrix = Matrix.translation(0, 0, 10);
     Vec3d up = new Vec3d(0, 1, 0);
     Vec3d target = new Vec3d(0, 0, 1);
     Vec3d strafe = new Vec3d(-1, 0, 0);
@@ -68,9 +68,11 @@ public class Window extends JPanel implements ActionListener {
           triangle.texture[0],
           triangle.texture[1],
           triangle.texture[2],
-          triangle.color
+          triangle.color,
+          triangle.normalIndices,
+          triangle.sprite
         );
-        
+
           Vec3d line1 = Vec3d.subtract(transformedTriangle.point[1], transformedTriangle.point[0]);
           Vec3d line2 = Vec3d.subtract(transformedTriangle.point[2], transformedTriangle.point[0]);
           Vec3d normal = Vec3d.normalize(Vec3d.crossProduct(line1, line2));
@@ -89,7 +91,9 @@ public class Window extends JPanel implements ActionListener {
             transformedTriangle.texture[0],
             transformedTriangle.texture[1],
             transformedTriangle.texture[2],
-            transformedTriangle.color
+            transformedTriangle.color,
+            transformedTriangle.normalIndices,
+            transformedTriangle.sprite
           );
 
           Triangle[] clipped = new Triangle[] {new Triangle(), new Triangle()};
@@ -102,7 +106,9 @@ public class Window extends JPanel implements ActionListener {
               clipped[j].texture[0],
               clipped[j].texture[1],
               clipped[j].texture[2],
-              clipped[j].color
+              clipped[j].color,
+              clipped[j].normalIndices,
+              clipped[j].sprite
             );
 
             projectedTriangle.texture[0].setU(projectedTriangle.texture[0].getU() / projectedTriangle.point[0].getW());
@@ -143,88 +149,88 @@ public class Window extends JPanel implements ActionListener {
           }
         }
       }
+    }
 
-      // Not needed until transparent or translucent material is added.
+    // Not needed until transparent or translucent material is added.
 
-      // Collections.sort(trianglesToRaster, (t1, t2) -> {
-      //   float z1 = t1.point[0].getZ() + t1.point[1].getZ() + t1.point[2].getZ();
-      //   float z2 = t2.point[0].getZ() + t2.point[1].getZ() + t2.point[2].getZ();
+    // Collections.sort(trianglesToRaster, (t1, t2) -> {
+    //   float z1 = t1.point[0].getZ() + t1.point[1].getZ() + t1.point[2].getZ();
+    //   float z2 = t2.point[0].getZ() + t2.point[1].getZ() + t2.point[2].getZ();
 
-      //   if (z1 > z2) {
-      //     return -1;
-      //   }
-      //   else if (z1 < z2) {
-      //     return 1;
-      //   }
-      //   return 0;
-      // });
+    //   if (z1 > z2) {
+    //     return -1;
+    //   }
+    //   else if (z1 < z2) {
+    //     return 1;
+    //   }
+    //   return 0;
+    // });
 
-      graphics.setColor(Color.BLACK);
-      graphics.fillRect(0, 0, Main.width, Main.height);
+    graphics.setColor(Color.BLACK);
+    graphics.fillRect(0, 0, Main.width, Main.height);
 
-      depthBuffer = new float[Main.height][Main.width];
+    depthBuffer = new float[Main.height][Main.width];
 
-      for (Triangle rasterizedTriangles : trianglesToRaster) {
-        Triangle[] clipped = new Triangle[] {new Triangle(), new Triangle()};
-        ArrayList<Triangle> triangleList = new ArrayList<>();
-        triangleList.add(rasterizedTriangles);
-        int newTriangles = 1;
-        for (byte side = 0; side < 4; side++) {
-          byte trianglesToAdd = 0;
-          while (newTriangles > 0) {
-            switch (side) {
-              case 0:
-                trianglesToAdd = Triangle.clipPlane(new Vec3d(0, 0, 0), new Vec3d(0, 1, 0), triangleList.get(0), clipped[0], clipped[1]);
-                break;
-              case 1:
-                trianglesToAdd = Triangle.clipPlane(new Vec3d(0, Main.height - 1, 0), new Vec3d(0, -1, 0), triangleList.get(0), clipped[0], clipped[1]);
-                break;
-              case 2:
-                trianglesToAdd = Triangle.clipPlane(new Vec3d(0, 0, 0), new Vec3d(1, 0, 0), triangleList.get(0), clipped[0], clipped[1]);
-                break;
-              case 3:
-                trianglesToAdd = Triangle.clipPlane(new Vec3d(Main.width - 1, 0, 0), new Vec3d(-1, 0, 0), triangleList.get(0), clipped[0], clipped[1]);
-                break;
-            }
-
-            triangleList.remove(0);
-            newTriangles--;
-
-            for (byte w = 0; w < trianglesToAdd; w++) {
-              triangleList.add(clipped[w].clone());
-            }
+    for (Triangle rasterizedTriangles : trianglesToRaster) {
+      Triangle[] clipped = new Triangle[] {new Triangle(), new Triangle()};
+      ArrayList<Triangle> triangleList = new ArrayList<>();
+      triangleList.add(rasterizedTriangles);
+      int newTriangles = 1;
+      for (byte side = 0; side < 4; side++) {
+        byte trianglesToAdd = 0;
+        while (newTriangles > 0) {
+          switch (side) {
+            case 0:
+              trianglesToAdd = Triangle.clipPlane(new Vec3d(0, 0, 0), new Vec3d(0, 1, 0), triangleList.get(0), clipped[0], clipped[1]);
+              break;
+            case 1:
+              trianglesToAdd = Triangle.clipPlane(new Vec3d(0, Main.height - 1, 0), new Vec3d(0, -1, 0), triangleList.get(0), clipped[0], clipped[1]);
+              break;
+            case 2:
+              trianglesToAdd = Triangle.clipPlane(new Vec3d(0, 0, 0), new Vec3d(1, 0, 0), triangleList.get(0), clipped[0], clipped[1]);
+              break;
+            case 3:
+              trianglesToAdd = Triangle.clipPlane(new Vec3d(Main.width - 1, 0, 0), new Vec3d(-1, 0, 0), triangleList.get(0), clipped[0], clipped[1]);
+              break;
           }
-          newTriangles = triangleList.size();
-        }
 
-        for (Triangle triangle : triangleList) {
-          textureTriangle(
-            Math.round(triangle.point[0].getX()), Math.round(triangle.point[0].getY()), triangle.texture[0].getU(), triangle.texture[0].getV(), triangle.texture[0].getW(),
-            Math.round(triangle.point[1].getX()), Math.round(triangle.point[1].getY()), triangle.texture[1].getU(), triangle.texture[1].getV(), triangle.texture[1].getW(),
-            Math.round(triangle.point[2].getX()), Math.round(triangle.point[2].getY()), triangle.texture[2].getU(), triangle.texture[2].getV(), triangle.texture[2].getW(),
-            mesh.getSprite()
-          );
-          // graphics.setColor(new Color(triangle.color, triangle.color, triangle.color));
-          // graphics.fillPolygon(new int[] {
-          //   (short)triangle.point[0].getX(),
-          //   (short)triangle.point[1].getX(),
-          //   (short)triangle.point[2].getX()
-          // }, new int[] {
-          //   (short)triangle.point[0].getY(),
-          //   (short)triangle.point[1].getY(),
-          //   (short)triangle.point[2].getY()
-          // }, 3);
-          // graphics.setColor(Color.WHITE);
-          // graphics.drawPolygon(new int[] {
-          //   (int)triangle.point[0].getX(),
-          //   (int)triangle.point[1].getX(),
-          //   (int)triangle.point[2].getX()
-          // }, new int[] {
-          //   (int)triangle.point[0].getY(),
-          //   (int)triangle.point[1].getY(),
-          //   (int)triangle.point[2].getY()
-          // }, 3);
+          triangleList.remove(0);
+          newTriangles--;
+
+          for (byte w = 0; w < trianglesToAdd; w++) {
+            triangleList.add(clipped[w].clone());
+          }
         }
+        newTriangles = triangleList.size();
+      }
+
+      for (Triangle triangle : triangleList) {
+        textureTriangle(
+          Math.round(triangle.point[0].getX()), Math.round(triangle.point[0].getY()), triangle.texture[0].getU(), triangle.texture[0].getV(), triangle.texture[0].getW(),
+          Math.round(triangle.point[1].getX()), Math.round(triangle.point[1].getY()), triangle.texture[1].getU(), triangle.texture[1].getV(), triangle.texture[1].getW(),
+          Math.round(triangle.point[2].getX()), Math.round(triangle.point[2].getY()), triangle.texture[2].getU(), triangle.texture[2].getV(), triangle.texture[2].getW(),
+          triangle.sprite
+        );
+        // graphics.setColor(new Color(triangle.color, triangle.color, triangle.color));
+        // graphics.fillPolygon(new int[] {
+        //   (short)triangle.point[0].getX(),
+        //   (short)triangle.point[1].getX(),
+        //   (short)triangle.point[2].getX()
+        // }, new int[] {
+        //   (short)triangle.point[0].getY(),
+        //   (short)triangle.point[1].getY(),
+        //   (short)triangle.point[2].getY()
+        // }, 3);
+        // graphics.setColor(Color.WHITE);
+        // graphics.drawPolygon(new int[] {
+        //   (int)triangle.point[0].getX(),
+        //   (int)triangle.point[1].getX(),
+        //   (int)triangle.point[2].getX()
+        // }, new int[] {
+        //   (int)triangle.point[0].getY(),
+        //   (int)triangle.point[1].getY(),
+        //   (int)triangle.point[2].getY()
+        // }, 3);
       }
     }
     graphics.setColor(Color.WHITE);

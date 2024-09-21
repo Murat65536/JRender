@@ -6,86 +6,52 @@ public class Triangle {
   public int[] textureCoords = new int[3];
   public int[] normalIndices = new int[3];
   public short color = 0;
-
-  public Triangle(float x1, float y1, float z1, float x2, float y2, float z2, float x3, float y3, float z3, short color) {
-    point[0] = new Vec3d(x1, y1, z1);
-    point[1] = new Vec3d(x2, y2, z2);
-    point[2] = new Vec3d(x3, y3, z3);
-    texture[0] = new Vec2d();
-    texture[1] = new Vec2d();
-    texture[2] = new Vec2d();
-    this.color = color;
-  }
-
-  public Triangle(float x1, float y1, float z1, float w1, float x2, float y2, float z2, float w2, float x3, float y3, float z3, float w3, short color) {
-    point[0] = new Vec3d(x1, y1, z1, w1);
-    point[1] = new Vec3d(x2, y2, z2, w2);
-    point[2] = new Vec3d(x3, y3, z3, w3);
-    texture[0] = new Vec2d();
-    texture[1] = new Vec2d();
-    texture[2] = new Vec2d();
-    this.color = color;
-  }
-
-  public Triangle(Vec3d point1, Vec3d point2, Vec3d point3) {
-    point[0] = point1.clone();
-    point[1] = point2.clone();
-    point[2] = point3.clone();
-    texture[0] = new Vec2d();
-    texture[1] = new Vec2d();
-    texture[2] = new Vec2d();
-  }
-
-  public Triangle(Vec3d point1, Vec3d point2, Vec3d point3, Vec2d texture1, Vec2d texture2, Vec2d texture3) {
-    point[0] = point1.clone();
-    point[1] = point2.clone();
-    point[2] = point3.clone();
-    texture[0] = texture1.clone();
-    texture[1] = texture2.clone();
-    texture[2] = texture3.clone();
-  }
+  public Sprite sprite;
 
   public Triangle(Vec3d point1, Vec3d point2, Vec3d point3, Vec2d texture1, Vec2d texture2, Vec2d texture3, short color) {
-    point[0] = point1.clone();
-    point[1] = point2.clone();
-    point[2] = point3.clone();
-    texture[0] = texture1.clone();
-    texture[1] = texture2.clone();
-    texture[2] = texture3.clone();
+    this.point[0] = point1.clone();
+    this.point[1] = point2.clone();
+    this.point[2] = point3.clone();
+    this.texture[0] = texture1.clone();
+    this.texture[1] = texture2.clone();
+    this.texture[2] = texture3.clone();
     this.color = color;
   }
 
-  public Triangle(Vec3d point1, Vec3d point2, Vec3d point3, int[] normalIndices) {
-    point[0] = point1.clone();
-    point[1] = point2.clone();
-    point[2] = point3.clone();
-    texture[0] = new Vec2d();
-    texture[1] = new Vec2d();
-    texture[2] = new Vec2d();
+  public Triangle(Vec3d point1, Vec3d point2, Vec3d point3, Vec2d texture1, Vec2d texture2, Vec2d texture3, int[] normalIndices, Sprite sprite) {
+    this.point[0] = point1.clone();
+    this.point[1] = point2.clone();
+    this.point[2] = point3.clone();
+    this.texture[0] = texture1.clone();
+    this.texture[1] = texture2.clone();
+    this.texture[2] = texture3.clone();
     this.normalIndices = normalIndices;
+    this.sprite = sprite;
   }
 
-  public Triangle(Vec3d point1, Vec3d point2, Vec3d point3, Vec2d texture1, Vec2d texture2, Vec2d texture3, int[] normalIndices) {
-    point[0] = point1.clone();
-    point[1] = point2.clone();
-    point[2] = point3.clone();
-    texture[0] = texture1.clone();
-    texture[1] = texture2.clone();
-    texture[2] = texture3.clone();
+  public Triangle(Vec3d point1, Vec3d point2, Vec3d point3, Vec2d texture1, Vec2d texture2, Vec2d texture3, short color, int[] normalIndices, Sprite sprite) {
+    this.point[0] = point1.clone();
+    this.point[1] = point2.clone();
+    this.point[2] = point3.clone();
+    this.texture[0] = texture1.clone();
+    this.texture[1] = texture2.clone();
+    this.texture[2] = texture3.clone();
+    this.color = color;
     this.normalIndices = normalIndices;
+    this.sprite = sprite;
   }
 
   public Triangle() {
-    point[0] = new Vec3d();
-    point[1] = new Vec3d();
-    point[2] = new Vec3d();
-    texture[0] = new Vec2d();
-    texture[1] = new Vec2d();
-    texture[2] = new Vec2d();
+    this.point[0] = new Vec3d();
+    this.point[1] = new Vec3d();
+    this.point[2] = new Vec3d();
+    this.texture[0] = new Vec2d();
+    this.texture[1] = new Vec2d();
+    this.texture[2] = new Vec2d();
   }
 
   public Triangle clone() {
-    return new Triangle(point[0], point[1], point[2], texture[0], texture[1], texture[2], color);
+    return new Triangle(point[0], point[1], point[2], texture[0], texture[1], texture[2], color, normalIndices, sprite);
   }
   public void set(Triangle triangle) {
     point[0].set(triangle.point[0]);
@@ -96,6 +62,7 @@ public class Triangle {
     texture[2].set(triangle.texture[2]);
     color = triangle.color;
     normalIndices = triangle.normalIndices;
+    sprite = triangle.sprite;
   }
 
   public void setColor(Triangle triangle) {
@@ -166,6 +133,7 @@ public class Triangle {
       outTriangle1.texture[2].setU(texture.getTexture() * (outsideTextures[1].getU() - insideTextures[0].getU()) + insideTextures[0].getU());
       outTriangle1.texture[2].setV(texture.getTexture() * (outsideTextures[1].getV() - insideTextures[0].getV()) + insideTextures[0].getV());
       outTriangle1.texture[2].setW(texture.getTexture() * (outsideTextures[1].getW() - insideTextures[0].getW()) + insideTextures[0].getW());
+      outTriangle1.sprite = inTriangle.sprite;
 
       return 1;
     }
@@ -183,6 +151,7 @@ public class Triangle {
       outTriangle1.texture[2].setU(texture.getTexture() * (outsideTextures[0].getU() - insideTextures[0].getU()) + insideTextures[0].getU());
       outTriangle1.texture[2].setV(texture.getTexture() * (outsideTextures[0].getV() - insideTextures[0].getV()) + insideTextures[0].getV());
       outTriangle1.texture[2].setW(texture.getTexture() * (outsideTextures[0].getW() - insideTextures[0].getW()) + insideTextures[0].getW());
+      outTriangle1.sprite = inTriangle.sprite;
 
       outTriangle2.point[0].set(insidePoints[1]);
       outTriangle2.texture[0].set(insideTextures[1]);
@@ -192,6 +161,7 @@ public class Triangle {
       outTriangle2.texture[2].setU(texture.getTexture() * (outsideTextures[0].getU() - insideTextures[1].getU()) + insideTextures[1].getU());
       outTriangle2.texture[2].setV(texture.getTexture() * (outsideTextures[0].getV() - insideTextures[1].getV()) + insideTextures[1].getV());
       outTriangle2.texture[2].setW(texture.getTexture() * (outsideTextures[0].getW() - insideTextures[1].getW()) + insideTextures[1].getW());
+      outTriangle2.sprite = inTriangle.sprite;
 
       return 2;
     }

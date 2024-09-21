@@ -10,6 +10,6 @@ public class FPS {
   }
 
   public float getFPS() {
-    return fps;
+    return this.fps;
   }
 }

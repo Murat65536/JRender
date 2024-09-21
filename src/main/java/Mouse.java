@@ -1,15 +1,15 @@
 package src.main.java;
 
+import java.awt.AWTException;
+import java.awt.Cursor;
 import java.awt.Point;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 import java.awt.event.MouseMotionListener;
 import java.awt.image.BufferedImage;
 import java.awt.Robot;
-import java.awt.AWTException;
-import java.awt.Cursor;
-
 import javax.swing.JFrame;
+
 
 public class Mouse implements MouseListener, MouseMotionListener {
   private static final Point origin = new Point(0, 0);
