@@ -1,12 +1,12 @@
 package src.main.java;
 
 public class Triangle {
-  public Vec3d[] point = new Vec3d[3];
-  public Vec2d[] texture = new Vec2d[3];
-  public int[] textureCoords = new int[3];
-  public int[] normalIndices = new int[3];
-  public short color = 0;
-  public Sprite sprite;
+  private Vec3d[] point = new Vec3d[3];
+  private Vec2d[] texture = new Vec2d[3];
+  private int[] textureCoords = new int[3];
+  private short color = 0;
+  private int[] normalIndices = new int[3];
+  private Sprite sprite;
 
   public Triangle(Vec3d point1, Vec3d point2, Vec3d point3, Vec2d texture1, Vec2d texture2, Vec2d texture3, short color) {
     this.point[0] = point1.clone();
@@ -65,8 +65,80 @@ public class Triangle {
     sprite = triangle.sprite;
   }
 
-  public void setColor(Triangle triangle) {
-    color = triangle.color;
+  public Vec3d[] getPoints() {
+    return this.point;
+  }
+
+  public void setPointX(int index, float value) {
+    this.point[index].setX(value);
+  }
+
+  public void setPointY(int index, float value) {
+    this.point[index].setY(value);
+  }
+
+  public void setPointZ(int index, float value) {
+    this.point[index].setZ(value);
+  }
+
+  public void setPointW(int index, float value) {
+    this.point[index].setW(value);
+  }
+
+  public void setPoint(int index, Vec3d point) {
+    this.point[index].set(point);
+  }
+
+  public Vec2d[] getTextures() {
+    return this.texture;
+  }
+
+  public void setTextureU(int index, float value) {
+    this.texture[index].setU(value);
+  }
+
+  public void setTextureV(int index, float value) {
+    this.texture[index].setV(value);
+  }
+
+  public void setTextureW(int index, float value) {
+    this.texture[index].setW(value);
+  }
+
+  public void setTexture(int index, Vec2d texture) {
+    this.texture[index].set(texture);
+  }
+
+  public int[] getTextureCoords() {
+    return this.textureCoords;
+  }
+
+  public void setTextureCoords(int index, int textureCoord) {
+    this.textureCoords[index] = textureCoord;
+  }
+
+  public short getColor() {
+    return this.color;
+  }
+
+  public void setColor(short color) {
+    this.color = color;
+  }
+
+  public int[] getNormalIndices() {
+    return this.normalIndices;
+  }
+
+  public void setNormaIndices(int index, int normalIndex) {
+    this.normalIndices[index] = normalIndex;
+  }
+
+  public Sprite getSprite() {
+    return this.sprite;
+  }
+
+  public void setSprite(Sprite sprite) {
+    this.sprite = sprite;
   }
 
   public static byte clipPlane(Vec3d planeP, Vec3d planeN, Triangle inTriangle, Triangle outTriangle1, Triangle outTriangle2) {
