@@ -205,22 +205,26 @@ public class Window extends JPanel implements ActionListener {
       }
 
       for (Triangle triangle : triangleList) {
-        textureTriangle(
-          Math.round(triangle.getPoints()[0].getX()), Math.round(triangle.getPoints()[0].getY()), triangle.getTextures()[0].getU(), triangle.getTextures()[0].getV(), triangle.getTextures()[0].getW(),
-          Math.round(triangle.getPoints()[1].getX()), Math.round(triangle.getPoints()[1].getY()), triangle.getTextures()[1].getU(), triangle.getTextures()[1].getV(), triangle.getTextures()[1].getW(),
-          Math.round(triangle.getPoints()[2].getX()), Math.round(triangle.getPoints()[2].getY()), triangle.getTextures()[2].getU(), triangle.getTextures()[2].getV(), triangle.getTextures()[2].getW(),
-          triangle.getSprite()
-        );
-        // graphics.setColor(new Color(triangle.color, triangle.color, triangle.color));
-        // graphics.fillPolygon(new int[] {
-        //   (short)triangle.getPoints()[0].getX(),
-        //   (short)triangle.getPoints()[1].getX(),
-        //   (short)triangle.getPoints()[2].getX()
-        // }, new int[] {
-        //   (short)triangle.getPoints()[0].getY(),
-        //   (short)triangle.getPoints()[1].getY(),
-        //   (short)triangle.getPoints()[2].getY()
-        // }, 3);
+        if (triangle.getSprite() == null) {
+          graphics.setColor(new Color(triangle.getColor(), triangle.getColor(), triangle.getColor()));
+          graphics.fillPolygon(new int[] {
+            (short)triangle.getPoints()[0].getX(),
+            (short)triangle.getPoints()[1].getX(),
+            (short)triangle.getPoints()[2].getX()
+          }, new int[] {
+            (short)triangle.getPoints()[0].getY(),
+            (short)triangle.getPoints()[1].getY(),
+            (short)triangle.getPoints()[2].getY()
+          }, 3);
+        }
+        else {
+          textureTriangle(
+            Math.round(triangle.getPoints()[0].getX()), Math.round(triangle.getPoints()[0].getY()), triangle.getTextures()[0].getU(), triangle.getTextures()[0].getV(), triangle.getTextures()[0].getW(),
+            Math.round(triangle.getPoints()[1].getX()), Math.round(triangle.getPoints()[1].getY()), triangle.getTextures()[1].getU(), triangle.getTextures()[1].getV(), triangle.getTextures()[1].getW(),
+            Math.round(triangle.getPoints()[2].getX()), Math.round(triangle.getPoints()[2].getY()), triangle.getTextures()[2].getU(), triangle.getTextures()[2].getV(), triangle.getTextures()[2].getW(),
+            triangle.getSprite()
+          );
+        }
         // graphics.setColor(Color.WHITE);
         // graphics.drawPolygon(new int[] {
         //   (int)triangle.getPoints()[0].getX(),

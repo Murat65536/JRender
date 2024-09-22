@@ -36,20 +36,38 @@ public class Mesh {
           vertices.add(new Vec3d(Float.parseFloat(splitData[1]), Float.parseFloat(splitData[2]), Float.parseFloat(splitData[3])));
         }
         else if (data.startsWith("f ")) {
-          triangles.add(new Triangle(
-            vertices.get(Integer.parseInt(splitData[1].split("/")[0]) - 1),
-            vertices.get(Integer.parseInt(splitData[2].split("/")[0]) - 1),
-            vertices.get(Integer.parseInt(splitData[3].split("/")[0]) - 1),
-            textureCoords.get(Integer.parseInt(splitData[1].split("/")[1]) - 1),
-            textureCoords.get(Integer.parseInt(splitData[2].split("/")[1]) - 1),
-            textureCoords.get(Integer.parseInt(splitData[3].split("/")[1]) - 1),
-            new int[] {
-              Integer.parseInt(splitData[1].split("/")[2]) - 1,
-              Integer.parseInt(splitData[2].split("/")[2]) - 1,
-              Integer.parseInt(splitData[3].split("/")[2]) - 1
-            },
-            sprite
-          ));
+          if (splitData[1].split("/")[1].equals("") || splitData[2].split("/")[1].equals("") || splitData[2].split("/")[1].equals("")) {
+            triangles.add(new Triangle(
+              vertices.get(Integer.parseInt(splitData[1].split("/")[0]) - 1),
+              vertices.get(Integer.parseInt(splitData[2].split("/")[0]) - 1),
+              vertices.get(Integer.parseInt(splitData[3].split("/")[0]) - 1),
+              new Vec2d(),
+              new Vec2d(),
+              new Vec2d(),
+              new int[] {
+                Integer.parseInt(splitData[1].split("/")[2]) - 1,
+                Integer.parseInt(splitData[2].split("/")[2]) - 1,
+                Integer.parseInt(splitData[3].split("/")[2]) - 1
+              },
+              sprite
+            ));
+          }
+          else {
+            triangles.add(new Triangle(
+              vertices.get(Integer.parseInt(splitData[1].split("/")[0]) - 1),
+              vertices.get(Integer.parseInt(splitData[2].split("/")[0]) - 1),
+              vertices.get(Integer.parseInt(splitData[3].split("/")[0]) - 1),
+              textureCoords.get(Integer.parseInt(splitData[1].split("/")[1]) - 1),
+              textureCoords.get(Integer.parseInt(splitData[2].split("/")[1]) - 1),
+              textureCoords.get(Integer.parseInt(splitData[3].split("/")[1]) - 1),
+              new int[] {
+                Integer.parseInt(splitData[1].split("/")[2]) - 1,
+                Integer.parseInt(splitData[2].split("/")[2]) - 1,
+                Integer.parseInt(splitData[3].split("/")[2]) - 1
+              },
+              sprite
+            ));
+          }
         }
         else if (data.startsWith("vn ")) {
           vertexNormals.add(new Vec3d(Float.parseFloat(splitData[1]), Float.parseFloat(splitData[2]), Float.parseFloat(splitData[3])));
