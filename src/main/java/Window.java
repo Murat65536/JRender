@@ -206,19 +206,15 @@ public class Window extends JPanel implements ActionListener {
 
       for (Triangle triangle : triangleList) {
         if (triangle.getSprite() == null) {
-          graphics.setColor(new Color(triangle.getColor(), triangle.getColor(), triangle.getColor()));
-          graphics.fillPolygon(new int[] {
-            (short)triangle.getPoints()[0].getX(),
-            (short)triangle.getPoints()[1].getX(),
-            (short)triangle.getPoints()[2].getX()
-          }, new int[] {
-            (short)triangle.getPoints()[0].getY(),
-            (short)triangle.getPoints()[1].getY(),
-            (short)triangle.getPoints()[2].getY()
-          }, 3);
+          createTriangle(
+            Math.round(triangle.getPoints()[0].getX()), Math.round(triangle.getPoints()[0].getY()), triangle.getTextures()[0].getW(),
+            Math.round(triangle.getPoints()[1].getX()), Math.round(triangle.getPoints()[1].getY()), triangle.getTextures()[1].getW(),
+            Math.round(triangle.getPoints()[2].getX()), Math.round(triangle.getPoints()[2].getY()), triangle.getTextures()[2].getW(),
+            new Color(triangle.getColor(), triangle.getColor(), triangle.getColor())
+          );
         }
         else {
-          textureTriangle(
+          createTexturedTriangle(
             Math.round(triangle.getPoints()[0].getX()), Math.round(triangle.getPoints()[0].getY()), triangle.getTextures()[0].getU(), triangle.getTextures()[0].getV(), triangle.getTextures()[0].getW(),
             Math.round(triangle.getPoints()[1].getX()), Math.round(triangle.getPoints()[1].getY()), triangle.getTextures()[1].getU(), triangle.getTextures()[1].getV(), triangle.getTextures()[1].getW(),
             Math.round(triangle.getPoints()[2].getX()), Math.round(triangle.getPoints()[2].getY()), triangle.getTextures()[2].getU(), triangle.getTextures()[2].getV(), triangle.getTextures()[2].getW(),
@@ -249,7 +245,116 @@ public class Window extends JPanel implements ActionListener {
     this.add(jLabel);
   }
 
-  private void textureTriangle(int x1, int y1, float u1, float v1, float w1,
+  private void createTriangle(int x1, int y1, float w1, int x2, int y2, float w2, int x3, int y3, float w3, Color color) {
+    if (y2 < y1) {
+      y1 += (y2 - (y2 = y1));
+      x1 += (x2 - (x2 = x1));
+      w1 += (w2 - (w2 = w1));
+    }
+    if (y3 < y1) {
+      y1 += (y3 - (y3 = y1));
+      x1 += (x3 - (x3 = x1));
+      w1 += (w3 - (w3 = w1));
+    }
+    if (y3 < y2) {
+      y2 += (y3 - (y3 = y2));
+      x2 += (x3 - (x3 = x2));
+      w2 += (w3 - (w3 = w2));
+    }
+    int dx1 = x2 - x1;
+    int dy1 = y2 - y1;
+    float dw1 = w2 - w1;
+
+    int dx2 = x3 - x1;
+    int dy2 = y3 - y1;
+    float dw2 = w3 - w1;
+
+    float textureW;
+
+    float daxStep = 0;
+    float dbxStep = 0;
+    float dw1Step = 0;
+    float dw2Step = 0;
+
+    if (dy1 != 0) {
+      daxStep = dx1 / (float)Math.abs(dy1);
+      dw1Step = dw1 / (float)Math.abs(dy1);
+    }
+    if (dy2 != 0) {
+      dbxStep = dx2 / (float)Math.abs(dy2);
+      dw2Step = dw2 / (float)Math.abs(dy2);
+    }
+
+    if (dy1 != 0) {
+      for (int y = y1; y <= y2; y++) {
+        int ax = Math.round(x1 + (float)(y - y1) * daxStep);
+        int bx = Math.round(x1 + (float)(y - y1) * dbxStep);
+
+        float textureSW = w1 + (float)(y - y1) * dw1Step;
+        float textureEW = w1 + (float)(y - y1) * dw2Step;
+  
+        if (ax > bx) {
+          ax += (bx - (bx = ax));
+          textureSW += (textureEW - (textureEW = textureSW));
+        }
+
+        float tStep = 1f / (float)(bx - ax);
+        float t = 0f;
+
+        for (int x = ax; x < bx; x++) {
+          textureW = (1f - t) * textureSW + t * textureEW;
+          if (textureW > depthBuffer[y][x]) {
+            bufferedImage.setRGB(x, y, color.getRGB());
+            depthBuffer[y][x] = textureW;
+          }
+          t += tStep;
+        }
+      }
+    }
+
+    dx1 = x3 - x2;
+    dy1 = y3 - y2;
+    dw1 = w3 - w2;
+
+    if (dy1 != 0) {
+      daxStep = dx1 / (float)Math.abs(dy1);
+      dw1Step = dw1 / (float)Math.abs(dy1);
+    }
+    if (dy2 != 0) {
+      dbxStep = dx2 / (float)Math.abs(dy2);
+    }
+
+    if (dy1 != 0) {
+      for (int y = y2; y <= y3; y++) {
+        int ax = Math.round(x2 + (float)(y - y2) * daxStep);
+        int bx = Math.round(x1 + (float)(y - y1) * dbxStep);
+  
+        float textureSW = w2 + (float)(y - y2) * dw1Step;
+
+        float textureEW = w1 + (float)(y - y1) * dw2Step;
+  
+        if (ax > bx) {
+          ax += (bx - (bx = ax));
+          textureSW += (textureEW - (textureEW = textureSW));
+  
+        }
+  
+        float tStep = 1f / (float)(bx - ax);
+        float t = 0f;
+  
+        for (int x = ax; x < bx; x++) {
+          textureW = (1f - t) * textureSW + t * textureEW;
+          if (textureW > depthBuffer[y][x]) {
+            bufferedImage.setRGB(x, y, color.getRGB());
+            depthBuffer[y][x] = textureW;
+          }
+          t += tStep;
+        }
+      }
+    }
+  }
+
+  private void createTexturedTriangle(int x1, int y1, float u1, float v1, float w1,
                                 int x2, int y2, float u2, float v2, float w2,
                                 int x3, int y3, float u3, float v3, float w3, Sprite sprite) {
     if (y2 < y1) {
