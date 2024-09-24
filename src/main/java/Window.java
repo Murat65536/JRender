@@ -73,16 +73,16 @@ public class Window extends JPanel implements ActionListener {
           triangle.getSprite()
         );
 
-          Vec3d line1 = Vec3d.subtract(transformedTriangle.getPoints()[1], transformedTriangle.getPoints()[0]);
-          Vec3d line2 = Vec3d.subtract(transformedTriangle.getPoints()[2], transformedTriangle.getPoints()[0]);
-          Vec3d normal = Vec3d.normalize(Vec3d.crossProduct(line1, line2));
-          Vec3d cameraRay = Vec3d.subtract(transformedTriangle.getPoints()[0], camera);
+        Vec3d line1 = Vec3d.subtract(transformedTriangle.getPoints()[1], transformedTriangle.getPoints()[0]);
+        Vec3d line2 = Vec3d.subtract(transformedTriangle.getPoints()[2], transformedTriangle.getPoints()[0]);
+        Vec3d normal = Vec3d.normalize(Vec3d.crossProduct(line1, line2));
+        Vec3d cameraRay = Vec3d.subtract(transformedTriangle.getPoints()[0], camera);
 
-          if (Vec3d.dotProduct(normal, cameraRay) < 0) {
+        if (Vec3d.dotProduct(normal, cameraRay) < 0) {
 
-            Vec3d lightDirection = new Vec3d(0, 1, -1);
-            lightDirection = Vec3d.normalize(lightDirection);
-            transformedTriangle.setColor((short)(Math.max(0.1f, Vec3d.dotProduct(lightDirection, normal)) * 255));
+          Vec3d lightDirection = new Vec3d(0, 1, -1);
+          lightDirection = Vec3d.normalize(lightDirection);
+          transformedTriangle.setColor((short)(Math.max(0.1f, Vec3d.dotProduct(lightDirection, normal)) * 255));
 
           Triangle triangleViewed = new Triangle(
             Vec3d.multiplyMatrix(viewMatrix, transformedTriangle.getPoints()[0]),
@@ -251,16 +251,19 @@ public class Window extends JPanel implements ActionListener {
       x1 += (x2 - (x2 = x1));
       w1 += (w2 - (w2 = w1));
     }
+
     if (y3 < y1) {
       y1 += (y3 - (y3 = y1));
       x1 += (x3 - (x3 = x1));
       w1 += (w3 - (w3 = w1));
     }
+
     if (y3 < y2) {
       y2 += (y3 - (y3 = y2));
       x2 += (x3 - (x3 = x2));
       w2 += (w3 - (w3 = w2));
     }
+
     int dx1 = x2 - x1;
     int dy1 = y2 - y1;
     float dw1 = w2 - w1;
@@ -320,6 +323,7 @@ public class Window extends JPanel implements ActionListener {
       daxStep = dx1 / (float)Math.abs(dy1);
       dw1Step = dw1 / (float)Math.abs(dy1);
     }
+
     if (dy2 != 0) {
       dbxStep = dx2 / (float)Math.abs(dy2);
     }
@@ -328,15 +332,13 @@ public class Window extends JPanel implements ActionListener {
       for (int y = y2; y <= y3; y++) {
         int ax = Math.round(x2 + (float)(y - y2) * daxStep);
         int bx = Math.round(x1 + (float)(y - y1) * dbxStep);
-  
-        float textureSW = w2 + (float)(y - y2) * dw1Step;
 
+        float textureSW = w2 + (float)(y - y2) * dw1Step;
         float textureEW = w1 + (float)(y - y1) * dw2Step;
   
         if (ax > bx) {
           ax += (bx - (bx = ax));
           textureSW += (textureEW - (textureEW = textureSW));
-  
         }
   
         float tStep = 1f / (float)(bx - ax);
@@ -355,8 +357,8 @@ public class Window extends JPanel implements ActionListener {
   }
 
   private void createTexturedTriangle(int x1, int y1, float u1, float v1, float w1,
-                                int x2, int y2, float u2, float v2, float w2,
-                                int x3, int y3, float u3, float v3, float w3, Sprite sprite) {
+                                      int x2, int y2, float u2, float v2, float w2,
+                                      int x3, int y3, float u3, float v3, float w3, Sprite sprite) {
     if (y2 < y1) {
       y1 += (y2 - (y2 = y1));
       x1 += (x2 - (x2 = x1));
