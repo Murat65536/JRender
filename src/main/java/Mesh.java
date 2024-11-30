@@ -112,7 +112,7 @@ public class Mesh {
           attributes.put("Dissolve", new String[] {splitData[1]});
         }
         else if (data.startsWith("map_Kd ")) {
-          sprite = new Sprite(splitData[1]);
+          sprite = new Sprite(PATH + splitData[1]);
           // attributes.put("Diffuse Texture Map", new String[] {splitData[1]});
         }
       }
